@@ -75,6 +75,7 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 		data.CurrentUsersPage = val.(int) == id
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
 	encoder.Encode(data)
 }
@@ -109,9 +110,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "POST" {
 		decoder := json.NewDecoder(r.Body)
+		defer r.Body.Close()
 		var form RegisterPost
-		err = decoder.Decode(&form)
-		if err != nil {
+		if err = decoder.Decode(&form); err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
@@ -162,6 +163,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: errorMessage,
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
 	encoder.Encode(data)
 }
@@ -180,6 +182,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "POST" {
 		decoder := json.NewDecoder(r.Body)
+		defer r.Body.Close()
 		var form LoginPost
 		if err := decoder.Decode(&form); err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -214,6 +217,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	if val, ok := session.Values["currentUser"]; ok {
 		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(int)), http.StatusFound)
+		return
 	}
 
 	errorMessage := ""
@@ -228,6 +232,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: errorMessage,
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
 	encoder.Encode(data)
 }
