@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -44,21 +44,16 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-type UserPageData struct {
+type UserGet struct {
 	CurrentUsersPage bool
 	Username         string
 }
 
 func usersHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := Store.Get(r, "session")
+	session, err := Store.Get(r, "test")
 	if err != nil {
 		http.Error(w, "Session error", http.StatusInternalServerError)
 		return
-	}
-
-	tmpl, err := template.ParseFiles("templates/profile.html")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "template ERROR: %s", err)
 	}
 
 	vars := mux.Vars(r)
@@ -71,7 +66,7 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := UserPageData{
+	data := UserGet{
 		CurrentUsersPage: false,
 		Username:         username,
 	}
@@ -80,12 +75,8 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 		data.CurrentUsersPage = val.(int) == id
 	}
 
-	tmpl.Execute(w, data)
-}
-
-type RegisterData struct {
-	HasError     bool
-	ErrorMessage string
+	encoder := json.NewEncoder(w)
+	encoder.Encode(data)
 }
 
 func hasUsername(username string) bool {
@@ -98,22 +89,36 @@ func hasUsername(username string) bool {
 	return count > 0
 }
 
+type RegisterGet struct {
+	HasError     bool
+	ErrorMessage string
+}
+
+type RegisterPost struct {
+	Username        string
+	Password        string
+	ConfirmPassword string
+}
+
 func registerHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := Store.Get(r, "session")
+	session, err := Store.Get(r, "test")
 	if err != nil {
 		http.Error(w, "Session error", http.StatusInternalServerError)
 		return
 	}
 
 	if r.Method == "POST" {
-		if err := r.ParseForm(); err != nil {
+		decoder := json.NewDecoder(r.Body)
+		var form RegisterPost
+		err = decoder.Decode(&form)
+		if err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
 
-		username := r.FormValue("username")
-		password := r.FormValue("password")
-		confirm := r.FormValue("confirm")
+		username := form.Username
+		password := form.Password
+		confirm := form.ConfirmPassword
 
 		if password != confirm {
 			session.Values["error"] = "Пароли не совпадают!"
@@ -145,11 +150,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(int)), http.StatusFound)
 	}
 
-	tmpl, err := template.ParseFiles("templates/register.html")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "template ERROR: %s", err)
-	}
-
 	errorMessage := ""
 	if val, ok := session.Values["error"]; ok {
 		errorMessage = val.(string)
@@ -157,29 +157,37 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		session.Save(r, w)
 	}
 
-	data := RegisterData{
+	data := RegisterGet{
 		HasError:     errorMessage != "",
 		ErrorMessage: errorMessage,
 	}
 
-	tmpl.Execute(w, data)
+	encoder := json.NewEncoder(w)
+	encoder.Encode(data)
+}
+
+type LoginPost struct {
+	Username string
+	Password string
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := Store.Get(r, "session")
+	session, err := Store.Get(r, "test")
 	if err != nil {
 		http.Error(w, "Session error", http.StatusInternalServerError)
 		return
 	}
 
 	if r.Method == "POST" {
-		if err := r.ParseForm(); err != nil {
+		decoder := json.NewDecoder(r.Body)
+		var form LoginPost
+		if err := decoder.Decode(&form); err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
 
-		username := r.FormValue("username")
-		password := r.FormValue("password")
+		username := form.Username
+		password := form.Password
 
 		if !hasUsername(username) {
 			session.Values["error"] = "Пользователь с таким именем не зарегистрирован!"
@@ -202,16 +210,10 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		db.QueryRow("SELECT id FROM users WHERE username=$1", username).Scan(&id)
 		session.Values["currentUser"] = id
 		session.Save(r, w)
-		// http.Redirect(w, r, fmt.Sprintf("/user/%d", id), http.StatusFound)
 	}
 
 	if val, ok := session.Values["currentUser"]; ok {
 		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(int)), http.StatusFound)
-	}
-
-	tmpl, err := template.ParseFiles("templates/login.html")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "template ERROR: %s", err)
 	}
 
 	errorMessage := ""
@@ -221,12 +223,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		session.Save(r, w)
 	}
 
-	data := RegisterData{
+	data := RegisterGet{
 		HasError:     errorMessage != "",
 		ErrorMessage: errorMessage,
 	}
 
-	tmpl.Execute(w, data)
+	encoder := json.NewEncoder(w)
+	encoder.Encode(data)
 }
 
 func main() {
