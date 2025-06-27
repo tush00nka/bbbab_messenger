@@ -2,12 +2,10 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -44,42 +42,6 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-type UserGet struct {
-	CurrentUsersPage bool
-	Username         string
-}
-
-func usersHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := Store.Get(r, "test")
-	if err != nil {
-		http.Error(w, "Session error", http.StatusInternalServerError)
-		return
-	}
-
-	vars := mux.Vars(r)
-	id, _ := strconv.Atoi(vars["id"])
-
-	var username string
-	err = db.QueryRow("SELECT username FROM users WHERE id=$1", id).Scan(&username)
-	if err != nil {
-		fmt.Fprintf(w, "no such user")
-		return
-	}
-
-	data := UserGet{
-		CurrentUsersPage: false,
-		Username:         username,
-	}
-
-	if val, ok := session.Values["currentUser"]; ok {
-		data.CurrentUsersPage = val.(int) == id
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
-	encoder.Encode(data)
-}
-
 func hasUsername(username string) bool {
 	var count int
 	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE username = $1", username).Scan(&count)
@@ -90,151 +52,9 @@ func hasUsername(username string) bool {
 	return count > 0
 }
 
-type RegisterGet struct {
+type ErrorGet struct {
 	HasError     bool
 	ErrorMessage string
-}
-
-type RegisterPost struct {
-	Username        string
-	Password        string
-	ConfirmPassword string
-}
-
-func registerHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := Store.Get(r, "test")
-	if err != nil {
-		http.Error(w, "Session error", http.StatusInternalServerError)
-		return
-	}
-
-	if r.Method == "POST" {
-		decoder := json.NewDecoder(r.Body)
-		defer r.Body.Close()
-		var form RegisterPost
-		if err = decoder.Decode(&form); err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
-		}
-
-		username := form.Username
-		password := form.Password
-		confirm := form.ConfirmPassword
-
-		if password != confirm {
-			session.Values["error"] = "Пароли не совпадают!"
-			session.Save(r, w)
-			http.Redirect(w, r, "/register", http.StatusSeeOther)
-			return
-		}
-
-		if hasUsername(username) {
-			session.Values["error"] = "Пользователь с таким именем уже существует!"
-			session.Save(r, w)
-			http.Redirect(w, r, "/register", http.StatusSeeOther)
-			return
-		}
-
-		if username != "" && password != "" {
-			hash, _ := HashPassword(password)
-			_, err := db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", username, hash)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "DB INSERT ERROR: %s", err)
-			}
-
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-	}
-
-	if val, ok := session.Values["currentUser"]; ok {
-		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(int)), http.StatusFound)
-	}
-
-	errorMessage := ""
-	if val, ok := session.Values["error"]; ok {
-		errorMessage = val.(string)
-		delete(session.Values, "error")
-		session.Save(r, w)
-	}
-
-	data := RegisterGet{
-		HasError:     errorMessage != "",
-		ErrorMessage: errorMessage,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
-	encoder.Encode(data)
-}
-
-type LoginPost struct {
-	Username string
-	Password string
-}
-
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := Store.Get(r, "test")
-	if err != nil {
-		http.Error(w, "Session error", http.StatusInternalServerError)
-		return
-	}
-
-	if r.Method == "POST" {
-		decoder := json.NewDecoder(r.Body)
-		defer r.Body.Close()
-		var form LoginPost
-		if err := decoder.Decode(&form); err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
-		}
-
-		username := form.Username
-		password := form.Password
-
-		if !hasUsername(username) {
-			session.Values["error"] = "Пользователь с таким именем не зарегистрирован!"
-			session.Save(r, w)
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-
-		var hash string
-		db.QueryRow("SELECT password FROM users WHERE username=$1", username).Scan(&hash)
-
-		if !CheckPasswordHash(password, hash) {
-			session.Values["error"] = "Неверный пароль!"
-			session.Save(r, w)
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-
-		var id int
-		db.QueryRow("SELECT id FROM users WHERE username=$1", username).Scan(&id)
-		session.Values["currentUser"] = id
-		session.Save(r, w)
-	}
-
-	if val, ok := session.Values["currentUser"]; ok {
-		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(int)), http.StatusFound)
-		return
-	}
-
-	errorMessage := ""
-	if val, ok := session.Values["error"]; ok {
-		errorMessage = val.(string)
-		delete(session.Values, "error")
-		session.Save(r, w)
-	}
-
-	data := RegisterGet{
-		HasError:     errorMessage != "",
-		ErrorMessage: errorMessage,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
-	encoder.Encode(data)
 }
 
 func main() {
@@ -249,6 +69,7 @@ func main() {
 
 	router.HandleFunc("/login", loginHandler).Methods("POST", "GET")
 	router.HandleFunc("/register", registerHandler).Methods("POST", "GET")
+	router.HandleFunc("/chats", chatsHandler).Methods("POST", "GET")
 	router.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 		session, err := Store.Get(r, "session")
 		if err != nil {
