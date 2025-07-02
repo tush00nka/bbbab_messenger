@@ -1,28 +1,29 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
-const CONN_STR string = "user=bor password=bor dbname=bbbab sslmode=disable"
+const DSN string = "host=localhost user=bor password=bor dbname=bbbab sslmode=disable"
 
-var db *sql.DB
+var db *gorm.DB
 var Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 
-func GetDB() *sql.DB {
+func GetDB() *gorm.DB {
 	var err error
 
 	if db == nil {
-		db, err = sql.Open("postgres", CONN_STR)
+		db, err = gorm.Open(postgres.Open(DSN), &gorm.Config{})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "CONNECTION ERROR: %s", err)
 			os.Exit(-1)
@@ -43,24 +44,16 @@ func CheckPasswordHash(password, hash string) bool {
 }
 
 func hasUsername(username string) bool {
-	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE username = $1", username).Scan(&count)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "DB ERROR: %s", err)
-	}
-
+	var count int64
+	db.Table("users").Where("username = ?", username).Count(&count)
 	return count > 0
 }
 
 type ErrorGet struct {
-	HasError     bool
 	ErrorMessage string
 }
 
 func main() {
-	db := GetDB()
-	defer db.Close()
-
 	router := mux.NewRouter()
 	router.HandleFunc("/user/{id:[0-9]+}", usersHandler)
 

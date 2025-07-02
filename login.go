@@ -12,18 +12,25 @@ type LoginPost struct {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
+	db := GetDB()
 	session, err := Store.Get(r, "test")
 	if err != nil {
 		http.Error(w, "Session error", http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	encoder := json.NewEncoder(w)
+
 	if r.Method == "POST" {
 		decoder := json.NewDecoder(r.Body)
 		defer r.Body.Close()
 		var form LoginPost
 		if err := decoder.Decode(&form); err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			encoder.Encode(ErrorGet{
+				ErrorMessage: "Bad Request",
+			})
 			return
 		}
 
@@ -31,30 +38,30 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		password := form.Password
 
 		if !hasUsername(username) {
-			session.Values["error"] = "Пользователь с таким именем не зарегистрирован!"
-			session.Save(r, w)
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			w.WriteHeader(http.StatusBadRequest)
+			encoder.Encode(ErrorGet{
+				ErrorMessage: "Пользователь с таким именем не зарегистрирован!",
+			})
 			return
 		}
 
-		var hash string
-		db.QueryRow("SELECT password FROM users WHERE username=$1", username).Scan(&hash)
+		var user User
+		db.Where("username = ?", username).First(&user)
 
-		if !CheckPasswordHash(password, hash) {
-			session.Values["error"] = "Неверный пароль!"
-			session.Save(r, w)
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+		if !CheckPasswordHash(password, user.Password) {
+			w.WriteHeader(http.StatusBadRequest)
+			encoder.Encode(ErrorGet{
+				ErrorMessage: "Неверный пароль!",
+			})
 			return
 		}
 
-		var id int
-		db.QueryRow("SELECT id FROM users WHERE username=$1", username).Scan(&id)
-		session.Values["currentUser"] = id
+		session.Values["currentUser"] = user.ID
 		session.Save(r, w)
 	}
 
 	if val, ok := session.Values["currentUser"]; ok {
-		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(int)), http.StatusFound)
+		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(uint)), http.StatusFound)
 		return
 	}
 
@@ -66,11 +73,9 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := ErrorGet{
-		HasError:     errorMessage != "",
 		ErrorMessage: errorMessage,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
 	encoder.Encode(data)
 }

@@ -1,2 +1,0 @@
-SELECT * FROM chats WHERE $1 = ANY (participants) AND $2 = ANY (participants); // both users
-SELECT * FROM chats WHERE $1 = ANY (participants); // user participates in this chat

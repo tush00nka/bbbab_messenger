@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -15,6 +14,7 @@ type UserGet struct {
 }
 
 func usersHandler(w http.ResponseWriter, r *http.Request) {
+	db := GetDB()
 	session, err := Store.Get(r, "test")
 	if err != nil {
 		http.Error(w, "Session error", http.StatusInternalServerError)
@@ -24,16 +24,12 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, _ := strconv.Atoi(vars["id"])
 
-	var username string
-	err = db.QueryRow("SELECT username FROM users WHERE id=$1", id).Scan(&username)
-	if err != nil {
-		fmt.Fprintf(w, "no such user")
-		return
-	}
+	var user User
+	db.First(&user, id)
 
 	data := UserGet{
 		CurrentUsersPage: false,
-		Username:         username,
+		Username:         user.Username,
 	}
 
 	if val, ok := session.Values["currentUser"]; ok {

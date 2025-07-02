@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 )
 
 type RegisterPost struct {
@@ -14,18 +13,26 @@ type RegisterPost struct {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
+	db := GetDB()
 	session, err := Store.Get(r, "test")
 	if err != nil {
 		http.Error(w, "Session error", http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	encoder := json.NewEncoder(w)
+
 	if r.Method == "POST" {
 		decoder := json.NewDecoder(r.Body)
 		defer r.Body.Close()
 		var form RegisterPost
 		if err = decoder.Decode(&form); err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
+			encoder.Encode(ErrorGet{
+				ErrorMessage: "Error parsing post form",
+			})
+
 			return
 		}
 
@@ -34,33 +41,31 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		confirm := form.ConfirmPassword
 
 		if password != confirm {
-			session.Values["error"] = "Пароли не совпадают!"
-			session.Save(r, w)
-			http.Redirect(w, r, "/register", http.StatusSeeOther)
+			w.WriteHeader(http.StatusBadRequest)
+			encoder.Encode(ErrorGet{
+				ErrorMessage: "Пароли не совпадают",
+			})
 			return
 		}
 
 		if hasUsername(username) {
-			session.Values["error"] = "Пользователь с таким именем уже существует!"
-			session.Save(r, w)
-			http.Redirect(w, r, "/register", http.StatusSeeOther)
+			w.WriteHeader((http.StatusBadRequest))
+			encoder.Encode(ErrorGet{
+				ErrorMessage: "Пользователь с таким именем уже существует!",
+			})
 			return
 		}
 
 		if username != "" && password != "" {
 			hash, _ := HashPassword(password)
-			_, err := db.Exec("INSERT INTO users (username, password) VALUES ($1, $2)", username, hash)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "DB INSERT ERROR: %s", err)
-			}
-
+			db.Create(&User{Username: username, Password: hash})
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
 	}
 
 	if val, ok := session.Values["currentUser"]; ok {
-		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(int)), http.StatusFound)
+		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(uint)), http.StatusFound)
 	}
 
 	errorMessage := ""
@@ -71,11 +76,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := ErrorGet{
-		HasError:     errorMessage != "",
 		ErrorMessage: errorMessage,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
 	encoder.Encode(data)
 }
