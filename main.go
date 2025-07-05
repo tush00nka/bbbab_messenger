@@ -93,11 +93,10 @@ func main() {
 	router.HandleFunc("/register", registerHandler).Methods("POST", "GET")
 	router.HandleFunc("/chats", chatsHandler).Methods("POST", "GET")
 	router.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
-		c, _ := r.Cookie("token")
-
-		tokenStr := c.Value
-		claims, _ := ValidateToken(tokenStr)
-		claims.ExpiresAt = time.Now().Add(-time.Hour).Unix()
+		http.SetCookie(w, &http.Cookie{
+			Name:    "token",
+			Expires: time.Now().Add(-7 * 24 * time.Hour),
+		})
 		http.Redirect(w, r, "/login", http.StatusFound)
 	})
 
