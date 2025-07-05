@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
@@ -14,11 +13,6 @@ type RegisterPost struct {
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	db := GetDB()
-	session, err := Store.Get(r, "test")
-	if err != nil {
-		http.Error(w, "Session error", http.StatusInternalServerError)
-		return
-	}
 
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
@@ -27,12 +21,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		defer r.Body.Close()
 		var form RegisterPost
-		if err = decoder.Decode(&form); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			encoder.Encode(ErrorGet{
-				ErrorMessage: "Error parsing post form",
-			})
-
+		if err := decoder.Decode(&form); err != nil {
+			ResponseError(w, encoder, http.StatusBadRequest, "Error parsing form")
 			return
 		}
 
@@ -41,18 +31,12 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		confirm := form.ConfirmPassword
 
 		if password != confirm {
-			w.WriteHeader(http.StatusBadRequest)
-			encoder.Encode(ErrorGet{
-				ErrorMessage: "Пароли не совпадают",
-			})
+			ResponseError(w, encoder, http.StatusBadRequest, "Пароли не совпадают")
 			return
 		}
 
 		if hasUsername(username) {
-			w.WriteHeader((http.StatusBadRequest))
-			encoder.Encode(ErrorGet{
-				ErrorMessage: "Пользователь с таким именем уже существует!",
-			})
+			ResponseError(w, encoder, http.StatusBadRequest, "Пользователь с таким именем уже существует!")
 			return
 		}
 
@@ -62,22 +46,11 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
+
+		return
 	}
 
-	if val, ok := session.Values["currentUser"]; ok {
-		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(uint)), http.StatusFound)
+	if !RedirectLoggedIn(w, r, encoder) {
+		w.WriteHeader(http.StatusOK)
 	}
-
-	errorMessage := ""
-	if val, ok := session.Values["error"]; ok {
-		errorMessage = val.(string)
-		delete(session.Values, "error")
-		session.Save(r, w)
-	}
-
-	data := ErrorGet{
-		ErrorMessage: errorMessage,
-	}
-
-	encoder.Encode(data)
 }

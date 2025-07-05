@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"time"
 )
 
 type LoginPost struct {
@@ -13,11 +13,6 @@ type LoginPost struct {
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	db := GetDB()
-	session, err := Store.Get(r, "test")
-	if err != nil {
-		http.Error(w, "Session error", http.StatusInternalServerError)
-		return
-	}
 
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
@@ -27,10 +22,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 		var form LoginPost
 		if err := decoder.Decode(&form); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			encoder.Encode(ErrorGet{
-				ErrorMessage: "Bad Request",
-			})
+			ResponseError(w, encoder, http.StatusBadRequest, "Bad Request")
 			return
 		}
 
@@ -38,10 +30,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		password := form.Password
 
 		if !hasUsername(username) {
-			w.WriteHeader(http.StatusBadRequest)
-			encoder.Encode(ErrorGet{
-				ErrorMessage: "Пользователь с таким именем не зарегистрирован!",
-			})
+			ResponseError(w, encoder, http.StatusBadRequest, "Пользователь с таким именем не зарегистрирован!")
 			return
 		}
 
@@ -49,33 +38,25 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		db.Where("username = ?", username).First(&user)
 
 		if !CheckPasswordHash(password, user.Password) {
-			w.WriteHeader(http.StatusBadRequest)
-			encoder.Encode(ErrorGet{
-				ErrorMessage: "Неверный пароль!",
-			})
+			ResponseError(w, encoder, http.StatusBadRequest, "Неверный пароль!")
 			return
 		}
 
-		session.Values["currentUser"] = user.ID
-		session.Save(r, w)
-	}
+		token, err := GenerateToken(username)
+		if err != nil {
+			ResponseError(w, encoder, http.StatusInternalServerError, "Error generation token")
+			return
+		}
 
-	if val, ok := session.Values["currentUser"]; ok {
-		http.Redirect(w, r, fmt.Sprintf("/user/%d", val.(uint)), http.StatusFound)
+		http.SetCookie(w, &http.Cookie{
+			Name:    "token",
+			Value:   token,
+			Expires: time.Now().Add(24 * time.Hour),
+		})
 		return
 	}
 
-	errorMessage := ""
-	if val, ok := session.Values["error"]; ok {
-		errorMessage = val.(string)
-		delete(session.Values, "error")
-		session.Save(r, w)
+	if !RedirectLoggedIn(w, r, encoder) {
+		w.WriteHeader(http.StatusOK)
 	}
-
-	data := ErrorGet{
-		ErrorMessage: errorMessage,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	encoder.Encode(data)
 }

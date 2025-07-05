@@ -14,17 +14,15 @@ func chatsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := Store.Get(r, "test")
-	if err != nil {
-		http.Error(w, "Session Error", http.StatusInternalServerError)
-		return
-	}
-
 	var data ChatsGet
 
-	if val, ok := session.Values["currentUser"]; ok {
+	currentUser, err := GetCurrentUser(r)
+	var user User
+	db.Where("username = ?", currentUser).First(&user)
+
+	if err == nil {
 		var chats []Chat
-		db.Where("? IN users", val.(uint)).Find(&chats)
+		db.Where("? IN users", user.ID).Find(&chats)
 		data.Chats = append(data.Chats, chats...)
 	}
 

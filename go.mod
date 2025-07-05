@@ -1,8 +1,13 @@
-module tushonka/bbbab_messenger
+module tush00nka/bbbab_messenger
 
 go 1.24.4
 
-require github.com/gorilla/sessions v1.4.0
+require (
+	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/gorilla/sessions v1.4.0
+	gorm.io/driver/postgres v1.6.0
+	gorm.io/gorm v1.30.0
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -13,8 +18,6 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
-	gorm.io/driver/postgres v1.6.0 // indirect
-	gorm.io/gorm v1.30.0 // indirect
 )
 
 require (

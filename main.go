@@ -1,23 +1,23 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const DSN string = "host=localhost user=bor password=bor dbname=bbbab sslmode=disable"
 
 var db *gorm.DB
-var Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 
 func GetDB() *gorm.DB {
 	var err error
@@ -53,9 +53,38 @@ type ErrorGet struct {
 	ErrorMessage string
 }
 
+func ResponseError(w http.ResponseWriter, encoder *json.Encoder, errorCode int, errorMessage string) {
+	w.WriteHeader(errorCode)
+	encoder.Encode(ErrorGet{
+		ErrorMessage: errorMessage,
+	})
+}
+
+func RedirectLoggedIn(w http.ResponseWriter, r *http.Request, encoder *json.Encoder) bool {
+	c, err := r.Cookie("token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			// ResponseError(w, encoder, http.StatusUnauthorized, "No Token")
+			return false
+		}
+		// ResponseError(w, encoder, http.StatusBadRequest, "Bad Request")
+		return false
+	}
+
+	tokenStr := c.Value
+	claims, err := ValidateToken(tokenStr)
+	if err != nil {
+		// ResponseError(w, encoder, http.StatusUnauthorized, "Invalid Token")
+		return false
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/user/%s", claims.Username), http.StatusFound)
+	return true
+}
+
 func main() {
 	router := mux.NewRouter()
-	router.HandleFunc("/user/{id:[0-9]+}", usersHandler)
+	router.HandleFunc("/user/{username}", usersHandler)
 
 	fs := http.FileServer(http.Dir("static"))
 	router.Handle("/", fs)
@@ -64,17 +93,12 @@ func main() {
 	router.HandleFunc("/register", registerHandler).Methods("POST", "GET")
 	router.HandleFunc("/chats", chatsHandler).Methods("POST", "GET")
 	router.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
-		session, err := Store.Get(r, "session")
-		if err != nil {
-			http.Error(w, "Session error", http.StatusInternalServerError)
-			return
-		}
+		c, _ := r.Cookie("token")
 
-		if _, ok := session.Values["currentUser"]; ok {
-			delete(session.Values, "currentUser")
-			session.Save(r, w)
-			http.Redirect(w, r, "/login", http.StatusFound)
-		}
+		tokenStr := c.Value
+		claims, _ := ValidateToken(tokenStr)
+		claims.ExpiresAt = time.Now().Add(-time.Hour).Unix()
+		http.Redirect(w, r, "/login", http.StatusFound)
 	})
 
 	fmt.Println("Server is listening on 8080...")

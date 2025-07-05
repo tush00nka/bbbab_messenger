@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -15,25 +14,22 @@ type UserGet struct {
 
 func usersHandler(w http.ResponseWriter, r *http.Request) {
 	db := GetDB()
-	session, err := Store.Get(r, "test")
-	if err != nil {
-		http.Error(w, "Session error", http.StatusInternalServerError)
-		return
-	}
 
 	vars := mux.Vars(r)
-	id, _ := strconv.Atoi(vars["id"])
+	username := vars["username"]
 
 	var user User
-	db.First(&user, id)
+	db.Where("username = ?", username).First(&user)
 
 	data := UserGet{
 		CurrentUsersPage: false,
-		Username:         user.Username,
+		Username:         username,
 	}
 
-	if val, ok := session.Values["currentUser"]; ok {
-		data.CurrentUsersPage = val.(int) == id
+	current_username, err := GetCurrentUser(r)
+
+	if err == nil {
+		data.CurrentUsersPage = username == current_username
 	}
 
 	w.Header().Set("Content-Type", "application/json")
