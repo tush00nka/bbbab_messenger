@@ -32,6 +32,120 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/login": {
+            "post": {
+                "description": "Log into account",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Login",
+                "operationId": "login",
+                "parameters": [
+                    {
+                        "description": "Login data",
+                        "name": "loginData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.LoginPost"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Редирект на профиль"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "post": {
+                "description": "Register an account",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "operationId": "register",
+                "parameters": [
+                    {
+                        "description": "Register data",
+                        "name": "registerData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.RegisterPost"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Редирект на профиль"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{username}": {
+            "get": {
+                "description": "Get user",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get user",
+                "operationId": "get-user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "username",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.UserGet"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -60,6 +174,39 @@ const docTemplate = `{
                 }
             }
         },
+        "main.ErrorGet": {
+            "type": "object",
+            "properties": {
+                "errorMessage": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.LoginPost": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.RegisterPost": {
+            "type": "object",
+            "properties": {
+                "confirmPassword": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "main.User": {
             "type": "object",
             "properties": {
@@ -68,6 +215,17 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.UserGet": {
+            "type": "object",
+            "properties": {
+                "currentUsersPage": {
+                    "type": "boolean"
                 },
                 "username": {
                     "type": "string"

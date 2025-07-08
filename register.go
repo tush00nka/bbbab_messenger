@@ -11,6 +11,15 @@ type RegisterPost struct {
 	ConfirmPassword string
 }
 
+// @Description Register an account
+// @ID register
+// @Accept json
+// @Produce  json
+// @Success 200 "Редирект на профиль"
+// @Failure 400 {object} ErrorGet
+// @Failure 500 {object} ErrorGet
+// @Param registerData body RegisterPost true "Register data"
+// @Router /register [post]
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	db := GetDB()
 
@@ -45,6 +54,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			db.Create(&User{Username: username, Password: hash})
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
+		} else {
+			ResponseError(w, encoder, http.StatusBadRequest, "Имя пользователя и пароль обязательны к заполнению!")
 		}
 
 		return

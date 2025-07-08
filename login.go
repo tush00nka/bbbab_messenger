@@ -11,6 +11,16 @@ type LoginPost struct {
 	Password string
 }
 
+// @Summary Login
+// @Description Log into account
+// @ID login
+// @Accept json
+// @Produce  json
+// @Success 200 "Редирект на профиль"
+// @Failure 400 {object} ErrorGet
+// @Failure 500 {object} ErrorGet
+// @Param loginData body LoginPost true "Login data"
+// @Router /login [post]
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	db := GetDB()
 

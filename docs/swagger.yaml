@@ -16,12 +16,40 @@ definitions:
           $ref: '#/definitions/main.Chat'
         type: array
     type: object
+  main.ErrorGet:
+    properties:
+      errorMessage:
+        type: string
+    type: object
+  main.LoginPost:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  main.RegisterPost:
+    properties:
+      confirmPassword:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
   main.User:
     properties:
       id:
         type: integer
       password:
         type: string
+      username:
+        type: string
+    type: object
+  main.UserGet:
+    properties:
+      currentUsersPage:
+        type: boolean
       username:
         type: string
     type: object
@@ -44,4 +72,79 @@ paths:
           schema:
             $ref: '#/definitions/main.ChatsGet'
       summary: Get chats for user
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Log into account
+      operationId: login
+      parameters:
+      - description: Login data
+        in: body
+        name: loginData
+        required: true
+        schema:
+          $ref: '#/definitions/main.LoginPost'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Редирект на профиль
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorGet'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorGet'
+      summary: Login
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Register an account
+      operationId: register
+      parameters:
+      - description: Register data
+        in: body
+        name: registerData
+        required: true
+        schema:
+          $ref: '#/definitions/main.RegisterPost'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Редирект на профиль
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorGet'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.ErrorGet'
+  /user/{username}:
+    get:
+      description: Get user
+      operationId: get-user
+      parameters:
+      - description: Username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.UserGet'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.ErrorGet'
+      summary: Get user
 swagger: "2.0"

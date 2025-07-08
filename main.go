@@ -1,5 +1,5 @@
 // @title BBBAB Messenger
-// @version 1.0
+// @version 0.1
 // @description This is a sample server.
 
 // @host localhost:8080
@@ -19,9 +19,10 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	_ "tush00nka/bbbab_messenger/docs"
+
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
-	_ "github.com/tush00nka/bbbab_messenger/docs"
 	"golang.org/x/crypto/bcrypt"
 )
 

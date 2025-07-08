@@ -12,14 +12,27 @@ type UserGet struct {
 	Username         string
 }
 
+// @Summary Get user
+// @Description Get user
+// @ID get-user
+// @Produce  json
+// @Success 200 {object} UserGet
+// @Failure 404 {object} ErrorGet
+// @Param username path string true "Username"
+// @Router /user/{username} [get]
 func usersHandler(w http.ResponseWriter, r *http.Request) {
 	db := GetDB()
+	w.Header().Set("Content-Type", "application/json")
+	encoder := json.NewEncoder(w)
 
 	vars := mux.Vars(r)
 	username := vars["username"]
 
 	var user User
-	db.Where("username = ?", username).First(&user)
+	if err := db.Where("username = ?", username).First(&user).Error; err != nil {
+		ResponseError(w, encoder, http.StatusNotFound, "No such user")
+		return
+	}
 
 	data := UserGet{
 		CurrentUsersPage: false,
@@ -32,7 +45,5 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 		data.CurrentUsersPage = username == current_username
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
 	encoder.Encode(data)
 }
