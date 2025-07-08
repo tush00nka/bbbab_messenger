@@ -1,0 +1,47 @@
+basePath: /
+definitions:
+  main.Chat:
+    properties:
+      id:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/main.User'
+        type: array
+    type: object
+  main.ChatsGet:
+    properties:
+      chats:
+        items:
+          $ref: '#/definitions/main.Chat'
+        type: array
+    type: object
+  main.User:
+    properties:
+      id:
+        type: integer
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is a sample server.
+  title: BBBAB Messenger
+  version: "0.1"
+paths:
+  /chats:
+    get:
+      description: Get chats for user
+      operationId: get-chats-for-user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.ChatsGet'
+      summary: Get chats for user
+swagger: "2.0"

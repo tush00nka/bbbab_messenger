@@ -1,3 +1,11 @@
+// @title BBBAB Messenger
+// @version 1.0
+// @description This is a sample server.
+
+// @host localhost:8080
+// @BasePath /
+// @query.collection.format multi
+
 package main
 
 import (
@@ -12,6 +20,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger"
+	_ "github.com/tush00nka/bbbab_messenger/docs"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -98,6 +108,18 @@ func main() {
 			Expires: time.Now().Add(-7 * 24 * time.Hour),
 		})
 		http.Redirect(w, r, "/login", http.StatusFound)
+	})
+
+	// Настройка Swagger
+	swaggerHandler := httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"), // Важно: относительный путь
+	)
+
+	router.PathPrefix("/swagger/").Handler(swaggerHandler)
+
+	// Явно обслуживаем doc.json
+	router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./docs/swagger.json")
 	})
 
 	fmt.Println("Server is listening on 8080...")

@@ -9,6 +9,12 @@ type ChatsGet struct {
 	Chats []Chat
 }
 
+// @Summary Get chats for user
+// @Description Get chats for user
+// @ID get-chats-for-user
+// @Produce  json
+// @Success 200 {object} ChatsGet
+// @Router /chats [get]
 func chatsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		return
