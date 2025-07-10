@@ -16,7 +16,7 @@ type LoginPost struct {
 // @ID login
 // @Accept json
 // @Produce  json
-// @Success 200 "Редирект на профиль"
+// @Success 200 {object} TokenResponse
 // @Failure 400 {object} ErrorGet
 // @Failure 500 {object} ErrorGet
 // @Param loginData body LoginPost true "Login data"
@@ -63,6 +63,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			Value:   token,
 			Expires: time.Now().Add(24 * time.Hour),
 		})
+
+		w.WriteHeader(http.StatusOK)
+		encoder.Encode(TokenResponse{
+			Token: token,
+		})
+
 		return
 	}
 

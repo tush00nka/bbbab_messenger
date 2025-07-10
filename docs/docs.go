@@ -57,7 +57,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Редирект на профиль"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.TokenResponse"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -83,6 +86,7 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "summary": "Register",
                 "operationId": "register",
                 "parameters": [
                     {
@@ -97,7 +101,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Редирект на профиль"
+                        "description": "Редирект на логин"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -203,6 +207,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
                     "type": "string"
                 }
             }

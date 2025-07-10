@@ -37,6 +37,11 @@ definitions:
       username:
         type: string
     type: object
+  main.TokenResponse:
+    properties:
+      token:
+        type: string
+    type: object
   main.User:
     properties:
       id:
@@ -89,7 +94,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: Редирект на профиль
+          description: OK
+          schema:
+            $ref: '#/definitions/main.TokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -116,7 +123,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Редирект на профиль
+          description: Редирект на логин
         "400":
           description: Bad Request
           schema:
@@ -125,6 +132,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/main.ErrorGet'
+      summary: Register
   /user/{username}:
     get:
       description: Get user

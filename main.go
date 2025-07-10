@@ -64,6 +64,10 @@ type ErrorGet struct {
 	ErrorMessage string
 }
 
+type TokenResponse struct {
+	Token string
+}
+
 func ResponseError(w http.ResponseWriter, encoder *json.Encoder, errorCode int, errorMessage string) {
 	w.WriteHeader(errorCode)
 	encoder.Encode(ErrorGet{
