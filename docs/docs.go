@@ -101,7 +101,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Редирект на логин"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.TokenResponse"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",

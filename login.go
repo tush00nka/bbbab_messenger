@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -52,7 +53,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		token, err := GenerateToken(username)
+		token, err := GenerateToken(fmt.Sprint(user.ID))
 		if err != nil {
 			ResponseError(w, encoder, http.StatusInternalServerError, "Error generation token")
 			return
