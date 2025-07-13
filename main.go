@@ -107,6 +107,7 @@ func main() {
 	router.HandleFunc("/login", loginHandler).Methods("POST", "GET")
 	router.HandleFunc("/register", registerHandler).Methods("POST", "GET")
 	router.HandleFunc("/chats", chatsHandler).Methods("POST", "GET")
+	router.HandleFunc("/usersearch", userSearchHandler).Methods("POST")
 	router.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{
 			Name:    "token",

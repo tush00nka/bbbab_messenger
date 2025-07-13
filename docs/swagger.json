@@ -147,6 +147,44 @@
                     }
                 }
             }
+        },
+        "/usersearch": {
+            "post": {
+                "description": "Search for user",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Search for user",
+                "operationId": "user-search",
+                "parameters": [
+                    {
+                        "description": "Search Request",
+                        "name": "Prompt",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.SearchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.User"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -204,6 +242,14 @@
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.SearchRequest": {
+            "type": "object",
+            "properties": {
+                "prompt": {
                     "type": "string"
                 }
             }

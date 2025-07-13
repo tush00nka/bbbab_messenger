@@ -37,6 +37,11 @@ definitions:
       username:
         type: string
     type: object
+  main.SearchRequest:
+    properties:
+      prompt:
+        type: string
+    type: object
   main.TokenResponse:
     properties:
       token:
@@ -157,4 +162,29 @@ paths:
           schema:
             $ref: '#/definitions/main.ErrorGet'
       summary: Get user
+  /usersearch:
+    post:
+      description: Search for user
+      operationId: user-search
+      parameters:
+      - description: Search Request
+        in: body
+        name: Prompt
+        required: true
+        schema:
+          $ref: '#/definitions/main.SearchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.User'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.ErrorGet'
+      summary: Search for user
 swagger: "2.0"

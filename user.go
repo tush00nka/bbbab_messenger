@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -46,4 +48,34 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encoder.Encode(data)
+}
+
+type SearchRequest struct {
+	Prompt string
+}
+
+// @Summary Search for user
+// @Description Search for user
+// @ID user-search
+// @Produce  json
+// @Success 200 {object} []User
+// @Failure 400 {object} ErrorGet
+// @Param Prompt body SearchRequest true "Search Request"
+// @Router /usersearch [post]
+func userSearchHandler(w http.ResponseWriter, r *http.Request) {
+	db := GetDB()
+	w.Header().Set("Content-Type", "application/json")
+	encoder := json.NewEncoder(w)
+
+	decoder := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	var search SearchRequest
+	if err := decoder.Decode(&search); err != nil {
+		ResponseError(w, encoder, http.StatusBadRequest, "Bad Request")
+		return
+	}
+
+	var users []User
+	db.Where("LOWER(username) LIKE ?", strings.ToLower(fmt.Sprint("%"+search.Prompt+"%"))).Find(&users)
+	encoder.Encode(users)
 }
