@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	"gorm.io/gorm"
 )
 
 type ChatsGet struct {
@@ -15,24 +18,154 @@ type ChatsGet struct {
 // @Produce  json
 // @Success 200 {object} ChatsGet
 // @Router /chats [get]
-func chatsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		return
-	}
+// func chatsHandler(w http.ResponseWriter, r *http.Request) {
+// 	if r.Method == "POST" {
+// 		return
+// 	}
 
-	var data ChatsGet
+// 	var data ChatsGet
 
-	currentUser, err := GetCurrentUser(r)
-	var user User
-	db.Where("username = ?", currentUser).First(&user)
+// 	currentUser, err := GetCurrentUser(r)
+// 	var user User
+// 	db.Where("username = ?", currentUser).First(&user)
 
-	if err == nil {
-		var chats []Chat
-		db.Where("? IN users", user.ID).Find(&chats)
-		data.Chats = append(data.Chats, chats...)
-	}
+// 	if err == nil {
+// 		var chats []Chat
+// 		db.Where("? IN users", user.ID).Find(&chats)
+// 		data.Chats = append(data.Chats, chats...)
+// 	}
+
+// 	w.Header().Set("Content-Type", "application/json")
+// 	encoder := json.NewEncoder(w)
+// 	encoder.Encode(data)
+// }
+
+type MessagePost struct {
+	ReceiverID uint
+	Message    string
+}
+
+// @Summary Send message
+// @Description Send message to selected chat
+// @ID send-message
+// @Accept json
+// @Produce  json
+// @Param Bearer header string true "Auth Token"
+// @Param MessageData body MessagePost true "Message Data"
+// @Success 200
+// @Failure 401 {object} ErrorGet
+// @Failure 400 {object} ErrorGet
+// @Router /sendmessage [post]
+func messageHandler(w http.ResponseWriter, r *http.Request) {
+	db := GetDB()
+
+	decoder := json.NewDecoder(r.Body)
+	var data MessagePost
+	decoder.Decode(&data)
 
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	encoder.Encode(data)
+
+	tokenStr := r.Header["Bearer"][0]
+	claims, err := ValidateToken(tokenStr)
+	if err != nil {
+		ResponseError(w, encoder, http.StatusUnauthorized, "Invalid Token")
+	}
+
+	var sender User
+	db.First(&sender, claims.UserID)
+	var receiver User
+	db.First(&receiver, data.ReceiverID)
+
+	exists, chatID, err := ChatExistsBetweenUsers(db, sender.ID, data.ReceiverID)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// ACHTUNG: это нейронка высрала
+	if !exists {
+		// Создаем чат только с ID пользователей (без попытки сохранить самих пользователей)
+		newChat := Chat{}
+		if err := db.Create(&newChat).Error; err != nil {
+			fmt.Printf("ошибка создания чата: %v\n", err)
+		}
+
+		// Добавляем пользователей в чат через таблицу связей
+		if err := db.Exec(`
+        INSERT INTO chat_users (chat_id, user_id) 
+        VALUES (?, ?), (?, ?)
+    `, newChat.ID, sender.ID, newChat.ID, receiver.ID).Error; err != nil {
+			fmt.Printf("ошибка добавления пользователей в чат: %v\n", err)
+		}
+
+		chatID = newChat.ID
+
+		db.Create(&Message{ChatID: chatID, SenderID: sender.ID, Message: data.Message})
+	} else {
+		db.Create(&Message{ChatID: chatID, SenderID: sender.ID, Message: data.Message})
+	}
+}
+
+type ListMessagesRequest struct {
+	ReceiverID uint
+}
+
+// @Summary List messages
+// @Description Get messages of chat with user
+// @ID list-messages
+// @Accept json
+// @Produce  json
+// @Param Bearer header string true "Auth Token"
+// @Param MessageData body ListMessagesRequest true "Message Request"
+// @Success 200 {object} []Message
+// @Failure 401 {object} ErrorGet
+// @Failure 400 {object} ErrorGet
+// @Router /listmessages [post]
+func listMessagesHandler(w http.ResponseWriter, r *http.Request) {
+	db := GetDB()
+
+	decoder := json.NewDecoder(r.Body)
+	var data ListMessagesRequest
+	decoder.Decode(&data)
+
+	w.Header().Set("Content-Type", "application/json")
+	encoder := json.NewEncoder(w)
+
+	tokenStr := r.Header["Bearer"][0]
+	claims, err := ValidateToken(tokenStr)
+	if err != nil {
+		ResponseError(w, encoder, http.StatusUnauthorized, "Invalid Token")
+	}
+
+	exists, chatID, err := ChatExistsBetweenUsers(db, claims.UserID, data.ReceiverID)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	if exists {
+		var messages []Message
+		db.Where("chat_id = ?", chatID).Find(&messages)
+
+		encoder.Encode(messages)
+	}
+}
+
+// ACHTUNG: это нейронка высрала
+func ChatExistsBetweenUsers(db *gorm.DB, user1ID, user2ID uint) (bool, uint, error) {
+	var count int64
+	var chatID uint
+
+	// Проверяем, есть ли чат, где оба пользователя состоят в одном чате
+	err := db.Table("chat_users").
+		Joins("JOIN chat_users as cu2 on chat_users.chat_id = cu2.chat_id").
+		Where("chat_users.user_id = ? AND cu2.user_id = ?", user1ID, user2ID).
+		Select("chat_users.chat_id").
+		Count(&count).
+		Scan(&chatID).Error
+
+	if err != nil {
+		return false, 0, err
+	}
+
+	return count > 0, chatID, nil
 }

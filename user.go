@@ -28,23 +28,23 @@ func usersHandler(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 
 	vars := mux.Vars(r)
-	username := vars["username"]
+	userID := vars["userID"]
 
 	var user User
-	if err := db.Where("username = ?", username).First(&user).Error; err != nil {
+	if err := db.First(&user, userID).Error; err != nil {
 		ResponseError(w, encoder, http.StatusNotFound, "No such user")
 		return
 	}
 
 	data := UserGet{
 		CurrentUsersPage: false,
-		Username:         username,
+		Username:         user.Username,
 	}
 
-	current_username, err := GetCurrentUser(r)
+	currentUserID, err := GetCurrentUser(r)
 
 	if err == nil {
-		data.CurrentUsersPage = username == current_username
+		data.CurrentUsersPage = user.ID == currentUserID
 	}
 
 	encoder.Encode(data)
@@ -57,6 +57,7 @@ type SearchRequest struct {
 // @Summary Search for user
 // @Description Search for user
 // @ID user-search
+// @Accept json
 // @Produce  json
 // @Success 200 {object} []User
 // @Failure 400 {object} ErrorGet

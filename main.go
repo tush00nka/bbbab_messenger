@@ -93,21 +93,23 @@ func RedirectLoggedIn(w http.ResponseWriter, r *http.Request, encoder *json.Enco
 		return false
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/user/%s", claims.Username), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/user/%d", claims.UserID), http.StatusFound)
 	return true
 }
 
 func main() {
 	router := mux.NewRouter()
-	router.HandleFunc("/user/{username}", usersHandler)
+	router.HandleFunc("/user/{userID}", usersHandler)
 
 	fs := http.FileServer(http.Dir("static"))
 	router.Handle("/", fs)
 
 	router.HandleFunc("/login", loginHandler).Methods("POST", "GET")
 	router.HandleFunc("/register", registerHandler).Methods("POST", "GET")
-	router.HandleFunc("/chats", chatsHandler).Methods("POST", "GET")
+	// router.HandleFunc("/chats", chatsHandler).Methods("POST", "GET")
 	router.HandleFunc("/usersearch", userSearchHandler).Methods("POST")
+	router.HandleFunc("/sendmessage", messageHandler).Methods("POST")
+	router.HandleFunc("/listmessages", listMessagesHandler).Methods("POST")
 	router.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{
 			Name:    "token",

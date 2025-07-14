@@ -1,19 +1,22 @@
 package main
 
+import "gorm.io/gorm"
+
 type User struct {
-	ID       uint
+	gorm.Model
+	Chats    []Chat `gorm:"many2many:chat_users;"`
 	Username string
 	Password string
 }
 
 type Chat struct {
-	ID    uint
-	Users []User `gorm:"many_to_many:chat_users;"`
+	gorm.Model
+	Users []User `gorm:"many2many:chat_users;"`
 }
 
 type Message struct {
-	ID          uint
-	Chat        Chat
-	Sender      User
-	MessageText string
+	gorm.Model
+	ChatID   uint
+	SenderID uint
+	Message  string
 }

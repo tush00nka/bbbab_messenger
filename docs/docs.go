@@ -15,19 +15,55 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/chats": {
-            "get": {
-                "description": "Get chats for user",
+        "/listmessages": {
+            "post": {
+                "description": "Get messages of chat with user",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Get chats for user",
-                "operationId": "get-chats-for-user",
+                "summary": "List messages",
+                "operationId": "list-messages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "Bearer",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Message Request",
+                        "name": "MessageData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.ListMessagesRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.ChatsGet"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Message"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
                         }
                     }
                 }
@@ -121,6 +157,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/sendmessage": {
+            "post": {
+                "description": "Send message to selected chat",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Send message",
+                "operationId": "send-message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "Bearer",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Message Data",
+                        "name": "MessageData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.MessagePost"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/main.ErrorGet"
+                        }
+                    }
+                }
+            }
+        },
         "/user/{username}": {
             "get": {
                 "description": "Get user",
@@ -157,6 +241,9 @@ const docTemplate = `{
         "/usersearch": {
             "post": {
                 "description": "Search for user",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -194,27 +281,37 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "gorm.DeletedAt": {
+            "type": "object",
+            "properties": {
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "description": "Valid is true if Time is not NULL",
+                    "type": "boolean"
+                }
+            }
+        },
         "main.Chat": {
             "type": "object",
             "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
                 "id": {
                     "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
                 },
                 "users": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/main.User"
-                    }
-                }
-            }
-        },
-        "main.ChatsGet": {
-            "type": "object",
-            "properties": {
-                "chats": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/main.Chat"
                     }
                 }
             }
@@ -227,6 +324,14 @@ const docTemplate = `{
                 }
             }
         },
+        "main.ListMessagesRequest": {
+            "type": "object",
+            "properties": {
+                "receiverID": {
+                    "type": "integer"
+                }
+            }
+        },
         "main.LoginPost": {
             "type": "object",
             "properties": {
@@ -235,6 +340,43 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "main.Message": {
+            "type": "object",
+            "properties": {
+                "chatID": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "senderID": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.MessagePost": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "receiverID": {
+                    "type": "integer"
                 }
             }
         },
@@ -271,10 +413,25 @@ const docTemplate = `{
         "main.User": {
             "type": "object",
             "properties": {
+                "chats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.Chat"
+                    }
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
+                },
                 "id": {
                     "type": "integer"
                 },
                 "password": {
+                    "type": "string"
+                },
+                "updatedAt": {
                     "type": "string"
                 },
                 "username": {

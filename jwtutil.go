@@ -11,14 +11,14 @@ import (
 var jwtKey = []byte(os.Getenv("JWT_KEY"))
 
 type Claims struct {
-	Username string `json:"username"`
+	UserID uint `json:"user_id"`
 	jwt.StandardClaims
 }
 
-func GenerateToken(username string) (string, error) {
+func GenerateToken(userID uint) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
-		Username: username,
+		UserID: userID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -46,20 +46,20 @@ func ValidateToken(tokenStr string) (*Claims, error) {
 	return claims, nil
 }
 
-func GetCurrentUser(r *http.Request) (string, error) {
+func GetCurrentUser(r *http.Request) (uint, error) {
 	c, err := r.Cookie("token")
 	if err != nil {
 		if err == http.ErrNoCookie {
-			return "", err
+			return 0, err
 		}
-		return "", err
+		return 0, err
 	}
 
 	tokenStr := c.Value
 	claims, err := ValidateToken(tokenStr)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 
-	return claims.Username, nil
+	return claims.UserID, nil
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
@@ -56,7 +55,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			db.Create(&User{Username: username, Password: hash})
 			var user User
 			db.Where("username = ?", username).First(&user)
-			token, err := GenerateToken(fmt.Sprint(user.ID))
+			token, err := GenerateToken(user.ID)
 			if err != nil {
 				ResponseError(w, encoder, http.StatusInternalServerError, "Error generation token")
 				return
