@@ -15,63 +15,9 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/listmessages": {
-            "post": {
-                "description": "Get messages of chat with user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "List messages",
-                "operationId": "list-messages",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Message Request",
-                        "name": "MessageData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/main.ListMessagesRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/main.Message"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
-                        }
-                    }
-                }
-            }
-        },
         "/login": {
             "post": {
-                "description": "Log into account",
+                "description": "Loing into account",
                 "consumes": [
                     "application/json"
                 ],
@@ -87,27 +33,33 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.LoginPost"
+                            "$ref": "#/definitions/handler.LoginRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/main.TokenResponse"
+                            "$ref": "#/definitions/handler.TokenResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -131,83 +83,41 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.RegisterPost"
+                            "$ref": "#/definitions/handler.RegisterRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/main.TokenResponse"
+                            "$ref": "#/definitions/handler.TokenResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/sendmessage": {
-            "post": {
-                "description": "Send message to selected chat",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Send message",
-                "operationId": "send-message",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Message Data",
-                        "name": "MessageData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/main.MessagePost"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/{username}": {
+        "/user/{id}": {
             "get": {
-                "description": "Get user",
+                "description": "Get user by id",
                 "produces": [
                     "application/json"
                 ],
@@ -215,9 +125,9 @@ const docTemplate = `{
                 "operationId": "get-user",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Username",
-                        "name": "username",
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
                         "in": "path",
                         "required": true
                     }
@@ -226,54 +136,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.UserGet"
+                            "$ref": "#/definitions/model.User"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
-                        }
-                    }
-                }
-            }
-        },
-        "/usersearch": {
-            "post": {
-                "description": "Search for user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Search for user",
-                "operationId": "user-search",
-                "parameters": [
-                    {
-                        "description": "Search Request",
-                        "name": "Prompt",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/main.SearchRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/main.User"
-                            }
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/main.ErrorGet"
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -293,7 +168,40 @@ const docTemplate = `{
                 }
             }
         },
-        "main.Chat": {
+        "handler.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.RegisterRequest": {
+            "type": "object",
+            "properties": {
+                "confirmPassword": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.TokenResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Chat": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -311,112 +219,18 @@ const docTemplate = `{
                 "users": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/main.User"
+                        "$ref": "#/definitions/model.User"
                     }
                 }
             }
         },
-        "main.ErrorGet": {
-            "type": "object",
-            "properties": {
-                "errorMessage": {
-                    "type": "string"
-                }
-            }
-        },
-        "main.ListMessagesRequest": {
-            "type": "object",
-            "properties": {
-                "receiverID": {
-                    "type": "integer"
-                }
-            }
-        },
-        "main.LoginPost": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "main.Message": {
-            "type": "object",
-            "properties": {
-                "chatID": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "senderID": {
-                    "type": "integer"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "main.MessagePost": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "receiverID": {
-                    "type": "integer"
-                }
-            }
-        },
-        "main.RegisterPost": {
-            "type": "object",
-            "properties": {
-                "confirmPassword": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "main.SearchRequest": {
-            "type": "object",
-            "properties": {
-                "prompt": {
-                    "type": "string"
-                }
-            }
-        },
-        "main.TokenResponse": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "type": "string"
-                }
-            }
-        },
-        "main.User": {
+        "model.User": {
             "type": "object",
             "properties": {
                 "chats": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/main.Chat"
+                        "$ref": "#/definitions/model.Chat"
                     }
                 },
                 "createdAt": {
@@ -439,13 +253,10 @@ const docTemplate = `{
                 }
             }
         },
-        "main.UserGet": {
+        "response.ErrorResponse": {
             "type": "object",
             "properties": {
-                "currentUsersPage": {
-                    "type": "boolean"
-                },
-                "username": {
+                "message": {
                     "type": "string"
                 }
             }

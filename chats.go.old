@@ -141,13 +141,14 @@ func listMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-
+	
+	var messages []Message = []Message{}
+		
 	if exists {
-		var messages []Message
 		db.Where("chat_id = ?", chatID).Find(&messages)
-
-		encoder.Encode(messages)
 	}
+	
+	encoder.Encode(messages)
 }
 
 // ACHTUNG: это нейронка высрала
