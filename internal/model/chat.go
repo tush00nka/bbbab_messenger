@@ -4,5 +4,6 @@ import "gorm.io/gorm"
 
 type Chat struct {
 	gorm.Model
-	Users []User `gorm:"many2many:chat_users;"`
+	Users    []User `gorm:"many2many:chat_users;"`
+	Messages []Message
 }

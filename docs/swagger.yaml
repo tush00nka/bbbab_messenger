@@ -29,6 +29,13 @@ definitions:
       token:
         type: string
     type: object
+  handler.sendMessageRequest:
+    properties:
+      message:
+        type: string
+      receiver_id:
+        type: integer
+    type: object
   model.Chat:
     properties:
       createdAt:
@@ -37,12 +44,33 @@ definitions:
         $ref: '#/definitions/gorm.DeletedAt'
       id:
         type: integer
+      messages:
+        items:
+          $ref: '#/definitions/model.Message'
+        type: array
       updatedAt:
         type: string
       users:
         items:
           $ref: '#/definitions/model.User'
         type: array
+    type: object
+  model.Message:
+    properties:
+      chatID:
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      message:
+        type: string
+      senderID:
+        type: integer
+      updatedAt:
+        type: string
     type: object
   model.User:
     properties:
@@ -75,6 +103,36 @@ info:
   title: BBBAB Messenger
   version: "0.1"
 paths:
+  /chat/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get messages for chat
+      operationId: get-messages
+      parameters:
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Message'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get messages
   /login:
     post:
       consumes:
@@ -141,6 +199,38 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Register
+  /sendmessage:
+    post:
+      consumes:
+      - application/json
+      description: Send message to chat
+      operationId: send-message
+      parameters:
+      - description: Auth Token
+        in: header
+        name: Bearer
+        required: true
+        type: string
+      - description: Message Data
+        in: body
+        name: MessageData
+        required: true
+        schema:
+          $ref: '#/definitions/handler.sendMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Send message
   /user/{id}:
     get:
       description: Get user by id

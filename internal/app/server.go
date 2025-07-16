@@ -14,14 +14,15 @@ type Server struct {
 	router *mux.Router
 }
 
-func NewServer(userController *handler.UserHandler) *Server {
+func NewServer(userHandler *handler.UserHandler, chatHandler *handler.ChatHandler) *Server {
 	router := mux.NewRouter()
 
 	// TODO: Middleware
 	// router.Use(middleware.Logging)
 
 	// Routes
-	userController.RegisterRoutes(router)
+	userHandler.RegisterRoutes(router)
+	chatHandler.RegisterRoutes(router)
 
 	// Настройка Swagger
 	swaggerHandler := httpSwagger.Handler(

@@ -5,7 +5,7 @@ import "gorm.io/gorm"
 type User struct {
 	gorm.Model
 	Chats    []Chat `gorm:"many2many:chat_users;"`
-	Username string `gorm:"uniqueIndex"`
+	Username string
 	Password string
 }
 
