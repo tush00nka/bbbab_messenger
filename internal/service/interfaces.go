@@ -8,6 +8,7 @@ type UserService interface {
 	GetUserByUsername(username string) (*model.User, error)
 	UpdateUser(user *model.User) error
 	UsernameExists(username string) (bool, error)
+	SearchUsers(prompt string) ([]*model.User, error)
 	// DeleteUser(id uint) error
 	// ListUsers() ([]model.User, error)
 }

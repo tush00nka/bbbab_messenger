@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"fmt"
+	"strings"
 	"tush00nka/bbbab_messenger/internal/model"
 
 	"gorm.io/gorm"
@@ -12,6 +14,7 @@ type UserRepository interface {
 	FindByUsername(username string) (*model.User, error)
 	Update(user *model.User) error
 	UsernameExists(username string) (bool, error)
+	Search(prompt string) ([]*model.User, error)
 	// Delete(id uint) error
 	// FindAll() ([]model.User, error)
 }
@@ -55,4 +58,13 @@ func (r *userRepository) UsernameExists(username string) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (r *userRepository) Search(prompt string) ([]*model.User, error) {
+	var users []*model.User
+	err := r.db.Model(&model.User{}).Where("LOWER(username) LIKE ?", strings.ToLower(fmt.Sprint("%"+prompt+"%"))).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }

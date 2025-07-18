@@ -25,6 +25,7 @@ func (c *UserHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/login", c.loginUser).Methods("POST")
 	router.HandleFunc("/register", c.registerUser).Methods("POST")
 	router.HandleFunc("/user/{id}", c.getUser).Methods("GET")
+	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET")
 	// router.HandleFunc("/users/{id}", c.updateUser).Methods("PUT")
 	// router.HandleFunc("/users/{id}", c.deleteUser).Methods("DELETE")
 	// router.HandleFunc("/users", c.listUsers).Methods("GET")
@@ -191,5 +192,31 @@ func (h *UserHandler) getUser(w http.ResponseWriter, r *http.Request) {
 	// data.CurrentUsersPage = user.ID == currentUserID
 	// }
 
+	user.SanitizePassword()
 	httputils.ResponseJSON(w, http.StatusOK, user)
+}
+
+// @Summary Search users
+// @Description Search users by username
+// @ID search-user
+// @Produce  json
+// @Success 200 {object} []model.User
+// @Failure 404 {object} response.ErrorResponse
+// @Param prompt path string true "Search Prompt"
+// @Router /search/{prompt} [get]
+func (h *UserHandler) searchUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	prompt := vars["prompt"]
+
+	users, err := h.userService.SearchUsers(prompt)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusNotFound, "failed to search for users")
+		return
+	}
+
+	for _, user := range users {
+		user.SanitizePassword()
+	}
+
+	httputils.ResponseJSON(w, http.StatusOK, users)
 }

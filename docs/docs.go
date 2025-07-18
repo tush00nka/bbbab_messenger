@@ -160,6 +160,42 @@ const docTemplate = `{
                 }
             }
         },
+        "/search/{prompt}": {
+            "get": {
+                "description": "Search users by username",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Search users",
+                "operationId": "search-user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search Prompt",
+                        "name": "prompt",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.User"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sendmessage": {
             "post": {
                 "description": "Send message to chat",

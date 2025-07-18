@@ -70,10 +70,9 @@ func (s *userService) UpdateUser(user *model.User) error {
 }
 
 func (s *userService) UsernameExists(username string) (bool, error) {
-	exists, err := s.userRepo.UsernameExists(username)
-	if err != nil {
-		return false, err
-	}
+	return s.userRepo.UsernameExists(username)
+}
 
-	return exists, nil
+func (s *userService) SearchUsers(prompt string) ([]*model.User, error) {
+	return s.userRepo.Search(prompt)
 }
