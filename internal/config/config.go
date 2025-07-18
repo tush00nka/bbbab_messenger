@@ -11,16 +11,10 @@ type Config struct {
 	Port string `mapstructure:"SERVER_PORT"`
 }
 
-type DBConfig struct {
-	DSN string `mapstructure:"DB_DSN"`
-}
-
-type ServerConfig struct {
-	Port string `mapstructure:"SERVER_PORT"`
-}
-
 func Load() (*Config, error) {
-	viper.SetConfigFile(".env")
+	viper.AddConfigPath("./")
+	viper.SetConfigName("app")
+	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
