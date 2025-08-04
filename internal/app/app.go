@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"log"
 	"tush00nka/bbbab_messenger/internal/config"
 	"tush00nka/bbbab_messenger/internal/handler"
@@ -12,7 +13,8 @@ type App struct {
 }
 
 func Run(cfg *config.Config) {
-	db, err := repository.NewDB(cfg.DSN)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", cfg.Host, cfg.User, cfg.Password, cfg.Name, cfg.DBPort)
+	db, err := repository.NewDB(dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,5 +27,5 @@ func Run(cfg *config.Config) {
 	chatHandler := handler.NewChatHandler(chatService)
 
 	server := NewServer(userHandler, chatHandler)
-	server.Run(cfg.Port)
+	server.Run(cfg.ServerPort)
 }

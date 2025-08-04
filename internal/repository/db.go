@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"time"
+	"tush00nka/bbbab_messenger/internal/model"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -16,6 +17,18 @@ func NewDB(dsn string) (*gorm.DB, error) {
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	if err := db.AutoMigrate(&model.User{}); err != nil {
+		return nil, err
+	}
+
+	if err := db.AutoMigrate(&model.Chat{}); err != nil {
+		return nil, err
+	}
+
+	if err := db.AutoMigrate(&model.Message{}); err != nil {
+		return nil, err
 	}
 
 	// Настройка пула соединений

@@ -16,8 +16,6 @@ import (
 	"tush00nka/bbbab_messenger/internal/config"
 )
 
-const DSN string = "host=localhost user=bor password=bor dbname=bbbab sslmode=disable"
-
 // var db *gorm.DB
 
 // func GetDB() *gorm.DB {
