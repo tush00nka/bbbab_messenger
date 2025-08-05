@@ -21,8 +21,8 @@ func NewChatHandler(chatService service.ChatService) *ChatHandler {
 }
 
 func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/sendmessage", h.sendMessage).Methods("POST")
-	router.HandleFunc("/chat/{id}", h.getMessages).Methods("GET")
+	router.HandleFunc("/sendmessage", h.sendMessage).Methods("POST", "OPTIONS")
+	router.HandleFunc("/chat/{id}", h.getMessages).Methods("GET", "OPTIONS")
 }
 
 // @Summary Send message

@@ -22,10 +22,10 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 }
 
 func (c *UserHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/login", c.loginUser).Methods("POST")
-	router.HandleFunc("/register", c.registerUser).Methods("POST")
-	router.HandleFunc("/user/{id}", c.getUser).Methods("GET")
-	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET")
+	router.HandleFunc("/login", c.loginUser).Methods("POST", "OPTIONS")
+	router.HandleFunc("/register", c.registerUser).Methods("POST", "OPTIONS")
+	router.HandleFunc("/user/{id}", c.getUser).Methods("GET", "OPTIONS")
+	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET", "OPTIONS")
 	// router.HandleFunc("/users/{id}", c.updateUser).Methods("PUT")
 	// router.HandleFunc("/users/{id}", c.deleteUser).Methods("DELETE")
 	// router.HandleFunc("/users", c.listUsers).Methods("GET")
