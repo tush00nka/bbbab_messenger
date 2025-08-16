@@ -244,6 +244,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/sms": {
+            "post": {
+                "description": "Send SMS to phone number",
+                "consumes": [
+                    "application/json"
+                ],
+                "summary": "Send SMS",
+                "operationId": "sms",
+                "parameters": [
+                    {
+                        "description": "SMS Data",
+                        "name": "smsData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SMSRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/user/{id}": {
             "get": {
                 "description": "Get user by id",
@@ -318,6 +350,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SMSRequest": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "number": {
                     "type": "string"
                 }
             }

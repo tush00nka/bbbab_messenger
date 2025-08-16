@@ -24,6 +24,13 @@ definitions:
       username:
         type: string
     type: object
+  handler.SMSRequest:
+    properties:
+      message:
+        type: string
+      number:
+        type: string
+    type: object
   handler.TokenResponse:
     properties:
       token:
@@ -255,6 +262,27 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Send message
+  /sms:
+    post:
+      consumes:
+      - application/json
+      description: Send SMS to phone number
+      operationId: sms
+      parameters:
+      - description: SMS Data
+        in: body
+        name: smsData
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SMSRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Send SMS
   /user/{id}:
     get:
       description: Get user by id

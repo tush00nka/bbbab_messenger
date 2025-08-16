@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"tush00nka/bbbab_messenger/internal/config"
 	"tush00nka/bbbab_messenger/internal/model"
 	"tush00nka/bbbab_messenger/internal/pkg/auth"
 	"tush00nka/bbbab_messenger/internal/pkg/httputils"
@@ -15,10 +17,11 @@ import (
 
 type UserHandler struct {
 	userService service.UserService
+	config      *config.Config
 }
 
-func NewUserHandler(userService service.UserService) *UserHandler {
-	return &UserHandler{userService: userService}
+func NewUserHandler(userService service.UserService, config *config.Config) *UserHandler {
+	return &UserHandler{userService: userService, config: config}
 }
 
 func (c *UserHandler) RegisterRoutes(router *mux.Router) {
@@ -26,6 +29,7 @@ func (c *UserHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/register", c.registerUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/user/{id}", c.getUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET", "OPTIONS")
+	router.HandleFunc("/sms", c.sendSMS).Methods("POST", "OPTIONS")
 	// router.HandleFunc("/users/{id}", c.updateUser).Methods("PUT")
 	// router.HandleFunc("/users/{id}", c.deleteUser).Methods("DELETE")
 	// router.HandleFunc("/users", c.listUsers).Methods("GET")
@@ -219,4 +223,43 @@ func (h *UserHandler) searchUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputils.ResponseJSON(w, http.StatusOK, users)
+}
+
+// @Summary Send SMS
+// @Description Send SMS to phone number
+// @ID sms
+// @Accept json
+// @Success 200
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Param smsData body SMSRequest true "SMS Data"
+// @Router /sms [post]
+func (h *UserHandler) sendSMS(w http.ResponseWriter, r *http.Request) {
+	var request SMSRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+	r.Body.Close()
+
+	if request.Message == "" || request.Number == "" {
+		httputils.ResponseError(w, http.StatusBadRequest, "Number and message are required")
+		return
+	}
+
+	msg := strings.Replace(request.Message, " ", "+", -1)
+
+	// send code
+	resp, err := http.Get(fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=%s&json=1", h.config.SMSAPI, request.Number, msg))
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to send SMS")
+		return
+	}
+
+	httputils.ResponseJSON(w, resp.StatusCode, resp.Body)
+}
+
+type SMSRequest struct {
+	Number  string
+	Message string
 }

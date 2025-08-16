@@ -14,6 +14,8 @@ type Config struct {
 	DBPort   string `mapstructure:"DB_PORT"`
 
 	ServerPort string `mapstructure:"SERVER_PORT"`
+
+	SMSAPI string `mapstructure:"SMS_API"`
 }
 
 func Load() (*Config, error) {
@@ -52,6 +54,10 @@ func Load() (*Config, error) {
 
 	if cfg.ServerPort == "" {
 		return nil, fmt.Errorf("SERVER_PORT is required")
+	}
+
+	if cfg.SMSAPI == "" {
+		return nil, fmt.Errorf("SMS_API is required")
 	}
 
 	return &cfg, nil
