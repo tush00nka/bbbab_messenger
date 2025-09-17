@@ -24,11 +24,9 @@ definitions:
       username:
         type: string
     type: object
-  handler.SMSRequest:
+  handler.SMSLoginRequest:
     properties:
-      message:
-        type: string
-      number:
+      phone:
         type: string
     type: object
   handler.TokenResponse:
@@ -93,6 +91,9 @@ definitions:
         type: integer
       password:
         type: string
+      phone:
+        description: такого формата мб 8-900-800-55-55
+        type: string
       updatedAt:
         type: string
       username:
@@ -140,6 +141,37 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Get messages
+  /initlogin:
+    post:
+      consumes:
+      - application/json
+      description: Init SMS login procedure
+      operationId: smslogin
+      parameters:
+      - description: Login data
+        in: body
+        name: loginData
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SMSLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: InitLogin
   /login:
     post:
       consumes:
@@ -262,27 +294,6 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Send message
-  /sms:
-    post:
-      consumes:
-      - application/json
-      description: Send SMS to phone number
-      operationId: sms
-      parameters:
-      - description: SMS Data
-        in: body
-        name: smsData
-        required: true
-        schema:
-          $ref: '#/definitions/handler.SMSRequest'
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      summary: Send SMS
   /user/{id}:
     get:
       description: Get user by id

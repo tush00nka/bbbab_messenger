@@ -16,6 +16,9 @@ type Config struct {
 	ServerPort string `mapstructure:"SERVER_PORT"`
 
 	SMSAPI string `mapstructure:"SMS_API"`
+
+	RedisPort     string `mapstructure:"REDIS_PORT"`
+	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
 }
 
 func Load() (*Config, error) {
@@ -58,6 +61,14 @@ func Load() (*Config, error) {
 
 	if cfg.SMSAPI == "" {
 		return nil, fmt.Errorf("SMS_API is required")
+	}
+
+	if cfg.RedisPort == "" {
+		return nil, fmt.Errorf("REDIS_PORT is required")
+	}
+
+	if cfg.RedisPassword == "" {
+		return nil, fmt.Errorf("REDIS_PASSWORD is required")
 	}
 
 	return &cfg, nil

@@ -22,6 +22,9 @@ func (s *userService) CreateUser(user *model.User) error {
 	if user.Password == "" {
 		return errors.New("password is required")
 	}
+	if user.Phone == "" {
+		return errors.New("phone is required")
+	}
 
 	return s.userRepo.Create(user)
 }
@@ -65,6 +68,7 @@ func (s *userService) UpdateUser(user *model.User) error {
 
 	// Обновляем только разрешенные поля
 	existingUser.Password = user.Password
+	existingUser.Phone = user.Phone
 
 	return s.userRepo.Update(existingUser)
 }
