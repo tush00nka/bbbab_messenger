@@ -28,6 +28,7 @@ func NewUserHandler(userService service.UserService, storage *storage.RedisStora
 
 func (c *UserHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/initlogin", c.initLogin).Methods("POST", "OPTIONS")
+	router.HandleFunc("/confirmlogin", c.confirmLogin).Methods("POST", "OPTIONS")
 	router.HandleFunc("/login", c.loginUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/register", c.registerUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/user/{id}", c.getUser).Methods("GET", "OPTIONS")
@@ -50,7 +51,7 @@ type SMSLoginRequest struct {
 
 // @Summary InitLogin
 // @Description Init SMS login procedure
-// @ID smslogin
+// @ID initlogin
 // @Accept json
 // @Produce json
 // @Success 200 {object} map[string]string
@@ -82,6 +83,103 @@ func (h *UserHandler) initLogin(w http.ResponseWriter, r *http.Request) {
 
 	httputils.ResponseJSON(w, http.StatusOK, map[string]string{
 		"message": "verification code sent",
+	})
+}
+
+type ConfirmLoginRequest struct {
+	Phone    string `json:"phone"`
+	Code     string `json:"code"`
+	Username string `json:"username"`
+}
+
+// @Summary Confirm Login
+// @Description Validate phone code and either create a new user or log into existing
+// @ID confirmlogin
+// @Accept json
+// @Produce json
+// @Success 201 {object} TokenResponse
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Param confirmLoginData body ConfirmLoginRequest true "Confirm Login data"
+// @Router /confirmlogin [post]
+func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("sheeesh")
+
+	var request ConfirmLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	r.Body.Close()
+
+	verification, err := h.storage.GetVerificationCode(request.Phone)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "Invalid or expired code")
+	}
+
+	fmt.Println(verification.Code)
+
+	if verification.Code != request.Code {
+		h.storage.DeleteVerificationCode(request.Phone)
+		httputils.ResponseError(w, http.StatusBadRequest, "Invalid code")
+		return
+	}
+
+	// done with redis, use postgresql from this point
+
+	usernameExists, err := h.userService.UsernameExists(request.Username)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to check username availability")
+		return
+	}
+
+	phoneExists, err := h.userService.PhoneExists(request.Phone)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to check phone availability")
+		return
+	}
+
+	var user *model.User
+
+	// create new user if nonexistent, or log into existing user
+	if !phoneExists {
+		if usernameExists {
+			httputils.ResponseError(w, http.StatusConflict, fmt.Sprintf("User with username %s exists", request.Username))
+			return
+		}
+
+		user = &model.User{Username: request.Username, Phone: request.Phone}
+		if err = h.userService.CreateUser(user); err != nil {
+			httputils.ResponseError(w, http.StatusInternalServerError, "Failed to create user")
+			return
+		}
+	} else {
+		user, err = h.userService.GetUserByPhone(request.Phone)
+		if err != nil {
+			httputils.ResponseError(w, http.StatusInternalServerError, "Failed to get user")
+			return
+		}
+	}
+
+	// if exists {
+	// 	httputils.ResponseError(w, http.StatusConflict, fmt.Sprintf("User with username %s exists", request.Username))
+	// 	return
+	// }
+
+	// user := &model.User{Username: request.Username, Phone: request.Phone}
+	// if err = h.userService.CreateUser(user); err != nil {
+	// 	httputils.ResponseError(w, http.StatusInternalServerError, "Failed to create user")
+	// 	return
+	// }
+
+	token, err := auth.GenerateToken(user.ID)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to generate token")
+		return
+	}
+
+	httputils.ResponseJSON(w, http.StatusCreated, TokenResponse{
+		Token: token,
 	})
 }
 

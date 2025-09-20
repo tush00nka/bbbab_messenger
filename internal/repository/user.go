@@ -12,8 +12,10 @@ type UserRepository interface {
 	Create(user *model.User) error
 	FindByID(id uint) (*model.User, error)
 	FindByUsername(username string) (*model.User, error)
+	FindByPhone(phone string) (*model.User, error)
 	Update(user *model.User) error
 	UsernameExists(username string) (bool, error)
+	PhoneExists(phone string) (bool, error)
 	Search(prompt string) ([]*model.User, error)
 	// Delete(id uint) error
 	// FindAll() ([]model.User, error)
@@ -47,6 +49,14 @@ func (r *userRepository) FindByUsername(username string) (*model.User, error) {
 	return &user, nil
 }
 
+func (r *userRepository) FindByPhone(phone string) (*model.User, error) {
+	var user model.User
+	if err := r.db.Where("phone = ?", phone).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *userRepository) Update(user *model.User) error {
 	return r.db.Save(user).Error
 }
@@ -54,6 +64,15 @@ func (r *userRepository) Update(user *model.User) error {
 func (r *userRepository) UsernameExists(username string) (bool, error) {
 	var count int64
 	err := r.db.Model(&model.User{}).Where("username = ?", username).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *userRepository) PhoneExists(phone string) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.User{}).Where("phone = ?", phone).Count(&count).Error
 	if err != nil {
 		return false, err
 	}

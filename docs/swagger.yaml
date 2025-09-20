@@ -8,6 +8,15 @@ definitions:
         description: Valid is true if Time is not NULL
         type: boolean
     type: object
+  handler.ConfirmLoginRequest:
+    properties:
+      code:
+        type: string
+      phone:
+        type: string
+      username:
+        type: string
+    type: object
   handler.LoginRequest:
     properties:
       password:
@@ -141,12 +150,41 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Get messages
+  /confirmlogin:
+    post:
+      consumes:
+      - application/json
+      description: Validate phone code and either create a new user or log into existing
+      operationId: confirmlogin
+      parameters:
+      - description: Confirm Login data
+        in: body
+        name: confirmLoginData
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ConfirmLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Confirm Login
   /initlogin:
     post:
       consumes:
       - application/json
       description: Init SMS login procedure
-      operationId: smslogin
+      operationId: initlogin
       parameters:
       - description: Login data
         in: body

@@ -64,3 +64,8 @@ func (s *RedisStorage) GetVerificationCode(phone string) (*model.VerificationCod
 
 	return &verification, nil
 }
+
+func (s *RedisStorage) DeleteVerificationCode(phone string) error {
+	key := fmt.Sprintf("verification:%s", phone)
+	return s.client.Del(s.ctx, key).Err()
+}
