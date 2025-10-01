@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,6 +19,16 @@ import (
 type UserHandler struct {
 	userService service.UserService
 	config      *config.Config
+}
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type SMSRequest struct {
+	Number  string `json:"number"`
+	Message string `json:"message"`
 }
 
 func NewUserHandler(userService service.UserService, config *config.Config) *UserHandler {
@@ -162,11 +173,6 @@ func (h *UserHandler) loginUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-type LoginRequest struct {
-	Username string
-	Password string
-}
-
 // @Summary Get user
 // @Description Get user by id
 // @ID get-user
@@ -240,7 +246,7 @@ func (h *UserHandler) sendSMS(w http.ResponseWriter, r *http.Request) {
 		httputils.ResponseError(w, http.StatusBadRequest, "Invalid request format")
 		return
 	}
-	r.Body.Close()
+	defer r.Body.Close()
 
 	if request.Message == "" || request.Number == "" {
 		httputils.ResponseError(w, http.StatusBadRequest, "Number and message are required")
@@ -249,17 +255,20 @@ func (h *UserHandler) sendSMS(w http.ResponseWriter, r *http.Request) {
 
 	msg := strings.Replace(request.Message, " ", "+", -1)
 
-	// send code
 	resp, err := http.Get(fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=%s&json=1", h.config.SMSAPI, request.Number, msg))
 	if err != nil {
 		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to send SMS")
 		return
 	}
+	defer resp.Body.Close()
 
-	httputils.ResponseJSON(w, resp.StatusCode, resp.Body)
-}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to read SMS provider response")
+		return
+	}
 
-type SMSRequest struct {
-	Number  string
-	Message string
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(resp.StatusCode)
+	w.Write(body)
 }

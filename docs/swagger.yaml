@@ -1,136 +1,155 @@
+swagger: "2.0"
+info:
+  description: This is a sample server.
+  title: BBBAB Messenger
+  version: "0.1"
+host: localhost:8080
 basePath: /
+schemes:
+  - http
 definitions:
   gorm.DeletedAt:
+    type: object
     properties:
       time:
         type: string
       valid:
         description: Valid is true if Time is not NULL
         type: boolean
-    type: object
   handler.LoginRequest:
+    type: object
     properties:
-      password:
-        type: string
       username:
         type: string
-    type: object
+      password:
+        type: string
   handler.RegisterRequest:
+    type: object
     properties:
+      username:
+        type: string
+      password:
+        type: string
       confirmPassword:
         type: string
-      password:
-        type: string
-      username:
-        type: string
-    type: object
   handler.SMSRequest:
+    type: object
     properties:
-      message:
-        type: string
       number:
         type: string
-    type: object
+      message:
+        type: string
   handler.TokenResponse:
+    type: object
     properties:
       token:
         type: string
+  handler.CreateGroupChatRequest:
     type: object
-  handler.sendMessageRequest:
+    properties:
+      name:
+        type: string
+        example: "Friends"
+      user_ids:
+        type: array
+        items:
+          type: integer
+        example: [2,3]
+  handler.SendMessageRequest:
+    type: object
     properties:
       message:
         type: string
+        example: "Hello world!"
       receiver_id:
         type: integer
-    type: object
+        description: "For 1-on-1 messages"
+      chat_id:
+        type: integer
+        description: "For group chat messages"
   model.Chat:
+    type: object
     properties:
+      id:
+        type: integer
       createdAt:
+        type: string
+      updatedAt:
         type: string
       deletedAt:
         $ref: '#/definitions/gorm.DeletedAt'
-      id:
-        type: integer
-      messages:
-        items:
-          $ref: '#/definitions/model.Message'
-        type: array
-      updatedAt:
-        type: string
       users:
+        type: array
         items:
           $ref: '#/definitions/model.User'
+      messages:
         type: array
-    type: object
+        items:
+          $ref: '#/definitions/model.Message'
   model.Message:
+    type: object
     properties:
+      id:
+        type: integer
       chatID:
         type: integer
-      createdAt:
-        type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
-      id:
-        type: integer
-      message:
-        type: string
       senderID:
         type: integer
-      updatedAt:
+      message:
         type: string
-    type: object
-  model.User:
-    properties:
-      chats:
-        items:
-          $ref: '#/definitions/model.Chat'
-        type: array
       createdAt:
+        type: string
+      updatedAt:
         type: string
       deletedAt:
         $ref: '#/definitions/gorm.DeletedAt'
+  model.User:
+    type: object
+    properties:
       id:
         type: integer
+      username:
+        type: string
       password:
+        type: string
+      createdAt:
         type: string
       updatedAt:
         type: string
-      username:
-        type: string
-    type: object
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      chats:
+        type: array
+        items:
+          $ref: '#/definitions/model.Chat'
   response.ErrorResponse:
+    type: object
     properties:
       message:
         type: string
-    type: object
-host: localhost:8080
-info:
-  contact: {}
-  description: This is a sample server.
-  title: BBBAB Messenger
-  version: "0.1"
 paths:
   /chat/{id}:
     get:
-      consumes:
-      - application/json
+      summary: Get messages
       description: Get messages for chat
       operationId: get-messages
-      parameters:
-      - description: Chat ID
-        in: path
-        name: id
-        required: true
-        type: integer
+      consumes:
+        - application/json
       produces:
-      - application/json
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          type: integer
+          required: true
+          description: Chat ID
       responses:
         "200":
           description: OK
           schema:
+            type: array
             items:
               $ref: '#/definitions/model.Message'
-            type: array
         "400":
           description: Bad Request
           schema:
@@ -139,22 +158,46 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.ErrorResponse'
-      summary: Get messages
+  /chat/create:
+    post:
+      summary: Create group chat
+      description: Create a new group chat
+      operationId: create-group-chat
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: groupChatData
+          required: true
+          description: Group chat data
+          schema:
+            $ref: '#/definitions/handler.CreateGroupChatRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
   /login:
     post:
-      consumes:
-      - application/json
-      description: Loing into account
+      summary: Login
+      description: Login into account
       operationId: login
-      parameters:
-      - description: Login data
-        in: body
-        name: loginData
-        required: true
-        schema:
-          $ref: '#/definitions/handler.LoginRequest'
+      consumes:
+        - application/json
       produces:
-      - application/json
+        - application/json
+      parameters:
+        - in: body
+          name: loginData
+          required: true
+          schema:
+            $ref: '#/definitions/handler.LoginRequest'
       responses:
         "201":
           description: Created
@@ -172,22 +215,21 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.ErrorResponse'
-      summary: Login
   /register:
     post:
-      consumes:
-      - application/json
+      summary: Register
       description: Register an account
       operationId: register
-      parameters:
-      - description: Register data
-        in: body
-        name: registerData
-        required: true
-        schema:
-          $ref: '#/definitions/handler.RegisterRequest'
+      consumes:
+        - application/json
       produces:
-      - application/json
+        - application/json
+      parameters:
+        - in: body
+          name: registerData
+          required: true
+          schema:
+            $ref: '#/definitions/handler.RegisterRequest'
       responses:
         "201":
           description: Created
@@ -205,51 +247,50 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.ErrorResponse'
-      summary: Register
   /search/{prompt}:
     get:
+      summary: Search users
       description: Search users by username
       operationId: search-user
       parameters:
-      - description: Search Prompt
-        in: path
-        name: prompt
-        required: true
-        type: string
+        - in: path
+          name: prompt
+          required: true
+          type: string
+          description: Search prompt
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: OK
           schema:
+            type: array
             items:
               $ref: '#/definitions/model.User'
-            type: array
         "404":
           description: Not Found
           schema:
             $ref: '#/definitions/response.ErrorResponse'
-      summary: Search users
   /sendmessage:
     post:
-      consumes:
-      - application/json
-      description: Send message to chat
+      summary: Send message
+      description: Send message to chat (direct or group)
       operationId: send-message
-      parameters:
-      - description: Auth Token
-        in: header
-        name: Bearer
-        required: true
-        type: string
-      - description: Message Data
-        in: body
-        name: MessageData
-        required: true
-        schema:
-          $ref: '#/definitions/handler.sendMessageRequest'
+      consumes:
+        - application/json
       produces:
-      - application/json
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          type: string
+          required: true
+          description: "Bearer token"
+        - in: body
+          name: MessageData
+          required: true
+          schema:
+            $ref: '#/definitions/handler.SendMessageRequest'
       responses:
         "200":
           description: OK
@@ -261,20 +302,19 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/response.ErrorResponse'
-      summary: Send message
   /sms:
     post:
-      consumes:
-      - application/json
+      summary: Send SMS
       description: Send SMS to phone number
       operationId: sms
+      consumes:
+        - application/json
       parameters:
-      - description: SMS Data
-        in: body
-        name: smsData
-        required: true
-        schema:
-          $ref: '#/definitions/handler.SMSRequest'
+        - in: body
+          name: smsData
+          required: true
+          schema:
+            $ref: '#/definitions/handler.SMSRequest'
       responses:
         "200":
           description: OK
@@ -282,19 +322,19 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/response.ErrorResponse'
-      summary: Send SMS
   /user/{id}:
     get:
+      summary: Get user
       description: Get user by id
       operationId: get-user
       parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - in: path
+          name: id
+          required: true
+          type: integer
+          description: User ID
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: OK
@@ -308,5 +348,3 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.ErrorResponse'
-      summary: Get user
-swagger: "2.0"
