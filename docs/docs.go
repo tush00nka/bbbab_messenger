@@ -15,44 +15,44 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/chat/{id}": {
-            "get": {
-                "description": "Get messages for chat",
+        "/chat/create": {
+            "post": {
+                "description": "Create a new group chat with users",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Get messages",
-                "operationId": "get-messages",
+                "summary": "Create group chat",
+                "operationId": "create-group-chat",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Chat ID",
-                        "name": "id",
-                        "in": "path",
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "Bearer",
+                        "in": "header",
                         "required": true
+                    },
+                    {
+                        "description": "Group Data",
+                        "name": "groupData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.createGroupRequest"
+                        }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.Message"
-                            }
+                            "$ref": "#/definitions/model.Chat"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -287,54 +287,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/sendmessage": {
-            "post": {
-                "description": "Send message to chat",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Send message",
-                "operationId": "send-message",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Message Data",
-                        "name": "MessageData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.sendMessageRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/user/{id}": {
             "get": {
                 "description": "Get user by id",
@@ -443,14 +395,17 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.sendMessageRequest": {
+        "handler.createGroupRequest": {
             "type": "object",
             "properties": {
-                "message": {
+                "name": {
                     "type": "string"
                 },
-                "receiver_id": {
-                    "type": "integer"
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -471,6 +426,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.Message"
                     }
+                },
+                "name": {
+                    "description": "опционально — имя группового чата",
+                    "type": "string"
                 },
                 "updatedAt": {
                     "type": "string"

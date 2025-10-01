@@ -25,9 +25,9 @@ func Run(cfg *config.Config) {
 		log.Fatal(err)
 	}
 
-	//storage := storage.NewRedisStorage(fmt.Sprintf("storage:%s", cfg.RedisPort), cfg.RedisPassword, 0) // TODO: get rid of magic number
+	storage := storage.NewRedisStorage(fmt.Sprintf("storage:%s", cfg.RedisPort), cfg.RedisPassword, 0) // TODO: get rid of magic number
 	sms := sms.NewMockSMSProvider("SOMETOKEN")
-  
+
 	// Redis
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
@@ -37,7 +37,7 @@ func Run(cfg *config.Config) {
 	// User
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
-	userHandler := handler.NewUserHandler(userService, cfg)
+	userHandler := handler.NewUserHandler(userService, storage, sms)
 
 	// Chat
 	chatRepo := repository.NewChatRepository(db)

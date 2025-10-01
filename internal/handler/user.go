@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -307,6 +306,11 @@ func (h *UserHandler) loginUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type LoginRequest struct {
+	Username string
+	Password string
+}
+
 // @Summary Get user
 // @Description Get user by id
 // @ID get-user
@@ -399,7 +403,7 @@ func (h *UserHandler) searchUser(w http.ResponseWriter, r *http.Request) {
 // 	httputils.ResponseJSON(w, resp.StatusCode, resp.Body)
 // }
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(resp.StatusCode)
-	w.Write(body)
-}
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(resp.StatusCode)
+// 	w.Write(body)
+// }
