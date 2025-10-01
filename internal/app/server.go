@@ -11,32 +11,44 @@ import (
 )
 
 type Server struct {
-	router *mux.Router
+	router      *mux.Router
+	userHandler *handler.UserHandler
+	chatHandler *handler.ChatHandler
 }
 
 func NewServer(userHandler *handler.UserHandler, chatHandler *handler.ChatHandler) *Server {
-	router := mux.NewRouter()
+	s := &Server{
+		router:      mux.NewRouter(),
+		userHandler: userHandler,
+		chatHandler: chatHandler,
+	}
 
-	// TODO: Middleware
-	// router.Use(middleware.Logging)
+	s.setupRoutes()
 
-	// Routes
-	userHandler.RegisterRoutes(router)
-	chatHandler.RegisterRoutes(router)
+	return s
+}
 
-	// Настройка Swagger
+func (s *Server) setupRoutes() {
+	api := s.router.PathPrefix("/api").Subrouter()
+
+	// Routes для пользователей
+	s.userHandler.RegisterRoutes(api)
+
+	// Routes для чатов
+	s.chatHandler.RegisterRoutes(api)
+	api.HandleFunc("/chat/join/{chat_id:[0-9]+}/{user_id:[0-9]+}", s.chatHandler.UserJoined).Methods("POST")
+	api.HandleFunc("/chat/leave/{chat_id:[0-9]+}/{user_id:[0-9]+}", s.chatHandler.UserLeft).Methods("POST")
+
+	// Swagger
 	swaggerHandler := httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"), // Важно: относительный путь
+		httpSwagger.URL("/swagger/doc.json"),
 	)
+	s.router.PathPrefix("/swagger/").Handler(swaggerHandler)
 
-	router.PathPrefix("/swagger/").Handler(swaggerHandler)
-
-	// Явно обслуживаем doc.json
-	router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
+	// doc.json
+	s.router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./docs/swagger.json")
 	})
-
-	return &Server{router: router}
 }
 
 func (s *Server) Run(port string) {

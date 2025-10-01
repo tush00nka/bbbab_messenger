@@ -9,6 +9,112 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/chat/create": {
+      "post": {
+        "description": "Create a new group chat",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "summary": "Create group chat",
+        "operationId": "create-group-chat",
+        "parameters": [
+          {
+            "description": "Group Chat Data",
+            "name": "groupChatData",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/handler.CreateGroupChatRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/model.Chat"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/response.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/sendmessage": {
+      "post": {
+        "description": "Send message to chat (direct or group)",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "summary": "Send message",
+        "operationId": "send-message",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Auth Token",
+            "name": "Authorization",
+            "in": "header",
+            "required": true
+          },
+          {
+            "description": "Message Data",
+            "name": "MessageData",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/handler.SendMessageRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "OK" },
+          "400": {
+            "description": "Bad Request",
+            "schema": { "$ref": "#/definitions/response.ErrorResponse" }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": { "$ref": "#/definitions/response.ErrorResponse" }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "handler.CreateGroupChatRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "Friends"
+        },
+        "user_ids": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "example": [2, 3]
+        }
+      }
+    },
+    "handler.SendMessageRequest": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "example": "Hello World!"
+        },
+        "receiver_id": {
+          "type": "integer",
+          "example": 2,
+          "description": "For 1-on-1 messages"
+        },
+        "chat_id": {
+          "type": "integer",
+          "example": 5,
+          "description": "For group chat messages"
+        }
+      },
         "/chat/{id}": {
             "get": {
                 "description": "Get messages for chat",
@@ -545,4 +651,5 @@
             }
         }
     }
+}
 }

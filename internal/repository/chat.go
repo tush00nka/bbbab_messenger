@@ -12,6 +12,7 @@ type ChatRepository interface {
 	AddUser(chatID, userID uint) error
 	SendMessage(chat *model.Chat, message model.Message) error
 	GetMessages(chatID uint) ([]model.Message, error)
+	CreateGroup(chat *model.Chat, userIDs []uint) error
 }
 
 type chatRepository struct {
@@ -27,46 +28,68 @@ func (r *chatRepository) Create(chat *model.Chat) error {
 }
 
 func (r *chatRepository) GetForUsers(user1ID, user2ID uint) (*model.Chat, error) {
-	var count int64
+	var chat model.Chat
 	var chatID uint
-	var chat *model.Chat
 
-	// Проверяем, есть ли чат, где оба пользователя состоят в одном чате
-	err := r.db.Table("chat_users").
-		Joins("JOIN chat_users as cu2 on chat_users.chat_id = cu2.chat_id").
-		Where("chat_users.user_id = ? AND cu2.user_id = ?", user1ID, user2ID).
-		Select("chat_users.chat_id").
-		Count(&count).
-		Scan(&chatID).Error
-
+	// Надёжно находим chat_id, где состоят оба пользователя
+	err := r.db.Raw(`
+		SELECT chat_id FROM chat_users
+		WHERE chat_id IN (SELECT chat_id FROM chat_users WHERE user_id = ?)
+		  AND chat_id IN (SELECT chat_id FROM chat_users WHERE user_id = ?)
+		LIMIT 1
+	`, user1ID, user2ID).Scan(&chatID).Error
 	if err != nil {
 		return nil, err
 	}
 
-	r.db.First(chat, chatID)
+	if chatID == 0 {
+		return nil, nil
+	}
 
-	return chat, nil
+	if err := r.db.Preload("Users").Preload("Messages").First(&chat, chatID).Error; err != nil {
+		return nil, err
+	}
+
+	return &chat, nil
 }
 
 func (r *chatRepository) AddUser(chatID, userID uint) error {
+	// Вставляем только если ещё нет записи
 	return r.db.Exec(`
-        INSERT INTO chat_users (chat_id, user_id) 
-        VALUES (?, ?)
-    `, chatID, userID).Error
+        INSERT INTO chat_users (chat_id, user_id)
+        SELECT ?, ?
+        WHERE NOT EXISTS (
+            SELECT 1 FROM chat_users WHERE chat_id = ? AND user_id = ?
+        )
+    `, chatID, userID, chatID, userID).Error
 }
 
 func (r *chatRepository) SendMessage(chat *model.Chat, message model.Message) error {
-	chat.Messages = append(chat.Messages, message)
-	return r.db.Save(chat).Error
+	// Создаём message напрямую — надёжнее, чем пытаться Save() whole chat
+	return r.db.Create(&message).Error
 }
 
 func (r *chatRepository) GetMessages(chatID uint) ([]model.Message, error) {
 	var messages []model.Message
 
-	err := r.db.Where("chat_id = ?", chatID).Find(&messages).Error
+	err := r.db.Where("chat_id = ?", chatID).Order("created_at asc").Find(&messages).Error
 	if err != nil {
 		return nil, err
 	}
 
 	return messages, nil
+}
+
+func (r *chatRepository) CreateGroup(chat *model.Chat, userIDs []uint) error {
+	if err := r.db.Create(chat).Error; err != nil {
+		return err
+	}
+
+	for _, uid := range userIDs {
+		if err := r.AddUser(chat.ID, uid); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

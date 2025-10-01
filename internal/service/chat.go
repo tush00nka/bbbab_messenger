@@ -39,3 +39,12 @@ func (s *chatService) SendMessageToChat(chat *model.Chat, message model.Message)
 func (s *chatService) GetMessagesOfChat(chatID uint) ([]model.Message, error) {
 	return s.chatRepo.GetMessages(chatID)
 }
+
+func (s *chatService) CreateGroupChat(name string, userIDs []uint) (*model.Chat, error) {
+	chat := &model.Chat{Name: name}
+	err := s.chatRepo.CreateGroup(chat, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	return chat, nil
+}

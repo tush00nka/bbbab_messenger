@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -8,7 +9,16 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-var jwtKey = []byte(os.Getenv("JWT_KEY"))
+var jwtKey []byte
+
+func init() {
+	key := os.Getenv("JWT_KEY")
+	if key == "" {
+		log.Println("WARNING: JWT_KEY is not set — using insecure fallback. Set JWT_KEY in env for production!")
+		key = "insecure-development-key-change-me"
+	}
+	jwtKey = []byte(key)
+}
 
 type Claims struct {
 	UserID uint `json:"user_id"`
@@ -46,6 +56,7 @@ func ValidateToken(tokenStr string) (*Claims, error) {
 	return claims, nil
 }
 
+// GetCurrentUser (legacy) оставим, но проект использует ValidateToken в handler'ах
 func GetCurrentUser(r *http.Request) (uint, error) {
 	c, err := r.Cookie("token")
 	if err != nil {
