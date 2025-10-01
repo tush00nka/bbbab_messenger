@@ -60,6 +60,97 @@ const docTemplate = `{
                 }
             }
         },
+        "/confirmlogin": {
+            "post": {
+                "description": "Validate phone code and either create a new user or log into existing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Confirm Login",
+                "operationId": "confirmlogin",
+                "parameters": [
+                    {
+                        "description": "Confirm Login data",
+                        "name": "confirmLoginData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ConfirmLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/initlogin": {
+            "post": {
+                "description": "Init SMS login procedure",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "InitLogin",
+                "operationId": "initlogin",
+                "parameters": [
+                    {
+                        "description": "Login data",
+                        "name": "loginData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SMSLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "description": "Loing into account",
@@ -244,38 +335,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/sms": {
-            "post": {
-                "description": "Send SMS to phone number",
-                "consumes": [
-                    "application/json"
-                ],
-                "summary": "Send SMS",
-                "operationId": "sms",
-                "parameters": [
-                    {
-                        "description": "SMS Data",
-                        "name": "smsData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.SMSRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/user/{id}": {
             "get": {
                 "description": "Get user by id",
@@ -329,6 +388,20 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.ConfirmLoginRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.LoginRequest": {
             "type": "object",
             "properties": {
@@ -354,13 +427,10 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.SMSRequest": {
+        "handler.SMSLoginRequest": {
             "type": "object",
             "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "number": {
+                "phone": {
                     "type": "string"
                 }
             }
@@ -458,6 +528,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "такого формата мб 8-900-800-55-55",
                     "type": "string"
                 },
                 "updatedAt": {

@@ -5,6 +5,8 @@ import (
 	"log"
 	"tush00nka/bbbab_messenger/internal/config"
 	"tush00nka/bbbab_messenger/internal/handler"
+	"tush00nka/bbbab_messenger/internal/pkg/sms"
+	"tush00nka/bbbab_messenger/internal/pkg/storage"
 	"tush00nka/bbbab_messenger/internal/repository"
 	"tush00nka/bbbab_messenger/internal/service"
 
@@ -23,6 +25,9 @@ func Run(cfg *config.Config) {
 		log.Fatal(err)
 	}
 
+	//storage := storage.NewRedisStorage(fmt.Sprintf("storage:%s", cfg.RedisPort), cfg.RedisPassword, 0) // TODO: get rid of magic number
+	sms := sms.NewMockSMSProvider("SOMETOKEN")
+  
 	// Redis
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",

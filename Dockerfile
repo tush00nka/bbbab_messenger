@@ -1,5 +1,3 @@
-LABEL maintainer="Alexey Borisoglebsky <endline00@ya.ru>"
-
 # Этап сборки (builder)
 FROM golang:1.24 as builder
 
@@ -12,6 +10,8 @@ RUN go mod download
 # Копируем весь код и собираем
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main ./api/main.go
+
+LABEL maintainer="Alexey Borisoglebsky <endline00@ya.ru>"
 
 # Финальный этап (минимальный образ)
 FROM alpine:latest

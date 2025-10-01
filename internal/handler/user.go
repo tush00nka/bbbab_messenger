@@ -6,11 +6,12 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
-	"tush00nka/bbbab_messenger/internal/config"
+	"time"
 	"tush00nka/bbbab_messenger/internal/model"
 	"tush00nka/bbbab_messenger/internal/pkg/auth"
 	"tush00nka/bbbab_messenger/internal/pkg/httputils"
+	"tush00nka/bbbab_messenger/internal/pkg/sms"
+	"tush00nka/bbbab_messenger/internal/pkg/storage"
 	"tush00nka/bbbab_messenger/internal/service"
 
 	"github.com/gorilla/mux"
@@ -18,29 +19,24 @@ import (
 
 type UserHandler struct {
 	userService service.UserService
-	config      *config.Config
+	storage     *storage.RedisStorage
+	sms         sms.SMSProvider
 }
 
-type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type SMSRequest struct {
-	Number  string `json:"number"`
-	Message string `json:"message"`
-}
-
-func NewUserHandler(userService service.UserService, config *config.Config) *UserHandler {
-	return &UserHandler{userService: userService, config: config}
+func NewUserHandler(userService service.UserService, storage *storage.RedisStorage, sms sms.SMSProvider) *UserHandler {
+	return &UserHandler{userService: userService, storage: storage, sms: sms}
 }
 
 func (c *UserHandler) RegisterRoutes(router *mux.Router) {
+	router.HandleFunc("/initlogin", c.initLogin).Methods("POST", "OPTIONS")
+	router.HandleFunc("/confirmlogin", c.confirmLogin).Methods("POST", "OPTIONS")
 	router.HandleFunc("/login", c.loginUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/register", c.registerUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/user/{id}", c.getUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET", "OPTIONS")
-	router.HandleFunc("/sms", c.sendSMS).Methods("POST", "OPTIONS")
+
+	// router.HandleFunc("/sms", c.sendSMS).Methods("POST", "OPTIONS")
+
 	// router.HandleFunc("/users/{id}", c.updateUser).Methods("PUT")
 	// router.HandleFunc("/users/{id}", c.deleteUser).Methods("DELETE")
 	// router.HandleFunc("/users", c.listUsers).Methods("GET")
@@ -48,6 +44,144 @@ func (c *UserHandler) RegisterRoutes(router *mux.Router) {
 
 type TokenResponse struct {
 	Token string `json:"token"`
+}
+
+type SMSLoginRequest struct {
+	Phone string `json:"phone"`
+}
+
+// @Summary InitLogin
+// @Description Init SMS login procedure
+// @ID initlogin
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Param loginData body SMSLoginRequest true "Login data"
+// @Router /initlogin [post]
+func (h *UserHandler) initLogin(w http.ResponseWriter, r *http.Request) {
+	var request SMSLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "Invalid request format")
+		return
+	}
+	r.Body.Close()
+
+	code := sms.GenerateVerificationCode()
+
+	err := h.storage.SaveVerificationCode(request.Phone, code, 10*time.Minute)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to save verification code: %v", err))
+		return
+	}
+
+	message := fmt.Sprintf("[Amber] Ваш код авторизации: %s", code)
+	if err := h.sms.SendSMS(request.Phone, message); err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to send SMS")
+		return
+	}
+
+	httputils.ResponseJSON(w, http.StatusOK, map[string]string{
+		"message": "verification code sent",
+	})
+}
+
+type ConfirmLoginRequest struct {
+	Phone    string `json:"phone"`
+	Code     string `json:"code"`
+	Username string `json:"username"`
+}
+
+// @Summary Confirm Login
+// @Description Validate phone code and either create a new user or log into existing
+// @ID confirmlogin
+// @Accept json
+// @Produce json
+// @Success 201 {object} TokenResponse
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Param confirmLoginData body ConfirmLoginRequest true "Confirm Login data"
+// @Router /confirmlogin [post]
+func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("sheeesh")
+
+	var request ConfirmLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	r.Body.Close()
+
+	verification, err := h.storage.GetVerificationCode(request.Phone)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "Invalid or expired code")
+	}
+
+	fmt.Println(verification.Code)
+
+	if verification.Code != request.Code {
+		h.storage.DeleteVerificationCode(request.Phone)
+		httputils.ResponseError(w, http.StatusBadRequest, "Invalid code")
+		return
+	}
+
+	// done with redis, use postgresql from this point
+
+	usernameExists, err := h.userService.UsernameExists(request.Username)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to check username availability")
+		return
+	}
+
+	phoneExists, err := h.userService.PhoneExists(request.Phone)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to check phone availability")
+		return
+	}
+
+	var user *model.User
+
+	// create new user if nonexistent, or log into existing user
+	if !phoneExists {
+		if usernameExists {
+			httputils.ResponseError(w, http.StatusConflict, fmt.Sprintf("User with username %s exists", request.Username))
+			return
+		}
+
+		user = &model.User{Username: request.Username, Phone: request.Phone}
+		if err = h.userService.CreateUser(user); err != nil {
+			httputils.ResponseError(w, http.StatusInternalServerError, "Failed to create user")
+			return
+		}
+	} else {
+		user, err = h.userService.GetUserByPhone(request.Phone)
+		if err != nil {
+			httputils.ResponseError(w, http.StatusInternalServerError, "Failed to get user")
+			return
+		}
+	}
+
+	// if exists {
+	// 	httputils.ResponseError(w, http.StatusConflict, fmt.Sprintf("User with username %s exists", request.Username))
+	// 	return
+	// }
+
+	// user := &model.User{Username: request.Username, Phone: request.Phone}
+	// if err = h.userService.CreateUser(user); err != nil {
+	// 	httputils.ResponseError(w, http.StatusInternalServerError, "Failed to create user")
+	// 	return
+	// }
+
+	token, err := auth.GenerateToken(user.ID)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to generate token")
+		return
+	}
+
+	httputils.ResponseJSON(w, http.StatusCreated, TokenResponse{
+		Token: token,
+	})
 }
 
 // @Summary Register
@@ -240,33 +374,30 @@ func (h *UserHandler) searchUser(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.ErrorResponse
 // @Param smsData body SMSRequest true "SMS Data"
 // @Router /sms [post]
-func (h *UserHandler) sendSMS(w http.ResponseWriter, r *http.Request) {
-	var request SMSRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		httputils.ResponseError(w, http.StatusBadRequest, "Invalid request format")
-		return
-	}
-	defer r.Body.Close()
+// func (h *UserHandler) sendSMS(w http.ResponseWriter, r *http.Request) {
+// 	var request SMSRequest
+// 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+// 		httputils.ResponseError(w, http.StatusBadRequest, "Invalid request format")
+// 		return
+// 	}
+// 	r.Body.Close()
 
-	if request.Message == "" || request.Number == "" {
-		httputils.ResponseError(w, http.StatusBadRequest, "Number and message are required")
-		return
-	}
+// 	if request.Message == "" || request.Number == "" {
+// 		httputils.ResponseError(w, http.StatusBadRequest, "Number and message are required")
+// 		return
+// 	}
 
-	msg := strings.Replace(request.Message, " ", "+", -1)
+// 	msg := strings.Replace(request.Message, " ", "+", -1)
 
-	resp, err := http.Get(fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=%s&json=1", h.config.SMSAPI, request.Number, msg))
-	if err != nil {
-		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to send SMS")
-		return
-	}
-	defer resp.Body.Close()
+// 	// send code
+// 	resp, err := http.Get(fmt.Sprintf("https://sms.ru/sms/send?api_id=%s&to=%s&msg=%s&json=1", h.config.SMSAPI, request.Number, msg))
+// 	if err != nil {
+// 		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to send SMS")
+// 		return
+// 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to read SMS provider response")
-		return
-	}
+// 	httputils.ResponseJSON(w, resp.StatusCode, resp.Body)
+// }
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(resp.StatusCode)

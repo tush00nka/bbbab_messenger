@@ -19,8 +19,12 @@ func (s *userService) CreateUser(user *model.User) error {
 	if user.Username == "" {
 		return errors.New("username is required")
 	}
-	if user.Password == "" {
-		return errors.New("password is required")
+	// TODO: Reimplement password
+	// if user.Password == "" {
+	// 	return errors.New("password is required")
+	// }
+	if user.Phone == "" {
+		return errors.New("phone is required")
 	}
 
 	return s.userRepo.Create(user)
@@ -56,6 +60,19 @@ func (s *userService) GetUserByUsername(username string) (*model.User, error) {
 	return user, nil
 }
 
+func (s *userService) GetUserByPhone(phone string) (*model.User, error) {
+	if phone == "" {
+		return nil, errors.New("invalid phone")
+	}
+
+	user, err := s.userRepo.FindByPhone(phone)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 func (s *userService) UpdateUser(user *model.User) error {
 	// Проверяем существование пользователя
 	existingUser, err := s.userRepo.FindByID(user.ID)
@@ -65,12 +82,17 @@ func (s *userService) UpdateUser(user *model.User) error {
 
 	// Обновляем только разрешенные поля
 	existingUser.Password = user.Password
+	existingUser.Phone = user.Phone
 
 	return s.userRepo.Update(existingUser)
 }
 
 func (s *userService) UsernameExists(username string) (bool, error) {
 	return s.userRepo.UsernameExists(username)
+}
+
+func (s *userService) PhoneExists(phone string) (bool, error) {
+	return s.userRepo.PhoneExists(phone)
 }
 
 func (s *userService) SearchUsers(prompt string) ([]*model.User, error) {
