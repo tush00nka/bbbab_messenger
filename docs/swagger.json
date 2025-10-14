@@ -281,6 +281,48 @@
                 }
             }
         },
+        "/sendmessage": {
+            "post": {
+                "description": "Send messages between two users only (for now)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Send message to user",
+                "operationId": "send-message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "Bearer",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Message Data",
+                        "name": "msgData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.sendMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/user/{id}": {
             "get": {
                 "description": "Get user by id",
@@ -400,6 +442,17 @@
                     "items": {
                         "type": "integer"
                     }
+                }
+            }
+        },
+        "handler.sendMessageRequest": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "receiver_id": {
+                    "type": "integer"
                 }
             }
         },

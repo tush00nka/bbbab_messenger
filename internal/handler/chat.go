@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"tush00nka/bbbab_messenger/internal/model"
@@ -33,7 +34,7 @@ func NewChatHandler(chatService service.ChatService, chatCacheService *service.C
 
 func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/sendmessage", h.sendMessage).Methods("POST", "OPTIONS")
-	router.HandleFunc("/chat/{id}", h.GetMessages).Methods("GET", "OPTIONS")
+	router.HandleFunc("/chat/{id}", h.getMessages).Methods("GET", "OPTIONS")
 	router.HandleFunc("/chat/create", h.createChat).Methods("POST", "OPTIONS")
 }
 
@@ -55,6 +56,16 @@ type sendMessageRequest struct {
 	Message    string `json:"message"`
 }
 
+// @Summary Send message to user
+// @Description Send messages between two users only (for now)
+// @ID send-message
+// @Accept json
+// @Produce json
+// @Param Bearer header string true "Auth Token"
+// @Param msgData body sendMessageRequest true "Message Data"
+// @Success 200
+// @Failure 400 {object} response.ErrorResponse
+// @Router /sendmessage [post]
 func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 	tokenStr := extractTokenFromHeader(r)
 	if tokenStr == "" {
@@ -122,7 +133,7 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetMessages (как было) — берём из Redis, если пусто — из БД
-func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
+func (h *ChatHandler) getMessages(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	chatID, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -179,13 +190,7 @@ func (h *ChatHandler) createChat(w http.ResponseWriter, r *http.Request) {
 
 	// ensure current user is in chat
 	userIDs := req.UserIDs
-	found := false
-	for _, id := range userIDs {
-		if id == claims.UserID {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(userIDs, claims.UserID)
 	if !found {
 		userIDs = append(userIDs, claims.UserID)
 	}

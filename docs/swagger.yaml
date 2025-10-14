@@ -52,6 +52,13 @@ definitions:
           type: integer
         type: array
     type: object
+  handler.sendMessageRequest:
+    properties:
+      message:
+        type: string
+      receiver_id:
+        type: integer
+    type: object
   model.Chat:
     properties:
       createdAt:
@@ -305,6 +312,34 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Search users
+  /sendmessage:
+    post:
+      consumes:
+      - application/json
+      description: Send messages between two users only (for now)
+      operationId: send-message
+      parameters:
+      - description: Auth Token
+        in: header
+        name: Bearer
+        required: true
+        type: string
+      - description: Message Data
+        in: body
+        name: msgData
+        required: true
+        schema:
+          $ref: '#/definitions/handler.sendMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Send message to user
   /user/{id}:
     get:
       description: Get user by id
