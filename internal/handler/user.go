@@ -10,7 +10,7 @@ import (
 	"tush00nka/bbbab_messenger/internal/pkg/auth"
 	"tush00nka/bbbab_messenger/internal/pkg/httputils"
 	"tush00nka/bbbab_messenger/internal/pkg/sms"
-	"tush00nka/bbbab_messenger/internal/pkg/storage"
+	"tush00nka/bbbab_messenger/internal/repository"
 	"tush00nka/bbbab_messenger/internal/service"
 
 	"github.com/gorilla/mux"
@@ -18,12 +18,12 @@ import (
 
 type UserHandler struct {
 	userService service.UserService
-	storage     *storage.RedisStorage
+	smsRepo     repository.SMSRepository
 	sms         sms.SMSProvider
 }
 
-func NewUserHandler(userService service.UserService, storage *storage.RedisStorage, sms sms.SMSProvider) *UserHandler {
-	return &UserHandler{userService: userService, storage: storage, sms: sms}
+func NewUserHandler(userService service.UserService, smsRepo repository.SMSRepository, sms sms.SMSProvider) *UserHandler {
+	return &UserHandler{userService: userService, smsRepo: smsRepo, sms: sms}
 }
 
 func (c *UserHandler) RegisterRoutes(router *mux.Router) {
@@ -69,7 +69,7 @@ func (h *UserHandler) initLogin(w http.ResponseWriter, r *http.Request) {
 
 	code := sms.GenerateVerificationCode()
 
-	err := h.storage.SaveVerificationCode(request.Phone, code, 10*time.Minute)
+	err := h.smsRepo.SaveVerificationCode(request.Phone, code, 10*time.Minute)
 	if err != nil {
 		httputils.ResponseError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to save verification code: %v", err))
 		return
@@ -112,7 +112,7 @@ func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
-	verification, err := h.storage.GetVerificationCode(request.Phone)
+	verification, err := h.smsRepo.GetVerificationCode(request.Phone)
 	if err != nil {
 		httputils.ResponseError(w, http.StatusBadRequest, "Invalid or expired code")
 	}
@@ -120,7 +120,7 @@ func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(verification.Code)
 
 	if verification.Code != request.Code {
-		h.storage.DeleteVerificationCode(request.Phone)
+		h.smsRepo.DeleteVerificationCode(request.Phone)
 		httputils.ResponseError(w, http.StatusBadRequest, "Invalid code")
 		return
 	}

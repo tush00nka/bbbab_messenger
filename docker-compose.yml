@@ -10,18 +10,18 @@ services:
     command: ./main
     depends_on:
       - db
-      - storage
+      - redis
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
 
-  storage:
+  redis:
     image: redis:7.4-alpine
     restart: always
     ports:
       - "${REDIS_PORT}:6379"
     command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
     volumes:
-      - storage:/data
+      - redis:/data
 
   db:
     image: postgres:alpine
@@ -35,6 +35,6 @@ services:
       - postgres-db:/var/lib/postgresql/data  
 
 volumes:
-  storage:
+  redis:
     driver: local
   postgres-db: {}

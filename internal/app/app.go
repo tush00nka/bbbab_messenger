@@ -6,7 +6,6 @@ import (
 	"tush00nka/bbbab_messenger/internal/config"
 	"tush00nka/bbbab_messenger/internal/handler"
 	"tush00nka/bbbab_messenger/internal/pkg/sms"
-	"tush00nka/bbbab_messenger/internal/pkg/storage"
 	"tush00nka/bbbab_messenger/internal/repository"
 	"tush00nka/bbbab_messenger/internal/service"
 
@@ -25,19 +24,21 @@ func Run(cfg *config.Config) {
 		log.Fatal(err)
 	}
 
-	storage := storage.NewRedisStorage(fmt.Sprintf("storage:%s", cfg.RedisPort), cfg.RedisPassword, 0) // TODO: get rid of magic number
+	// storage := storage.NewRedisStorage(fmt.Sprintf("storage:%s", cfg.RedisPort), cfg.RedisPassword, 0) // TODO: get rid of magic number
 	sms := sms.NewMockSMSProvider("SOMETOKEN")
 
 	// Redis
 	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr:     fmt.Sprintf("redis:%s", cfg.RedisPort),
+		Password: cfg.RedisPassword,
 	})
 	cacheRepo := repository.NewChatCacheRepository(rdb)
+	smsRepo := repository.NewSMSRepository(rdb)
 
 	// User
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
-	userHandler := handler.NewUserHandler(userService, storage, sms)
+	userHandler := handler.NewUserHandler(userService, smsRepo, sms)
 
 	// Chat
 	chatRepo := repository.NewChatRepository(db)
