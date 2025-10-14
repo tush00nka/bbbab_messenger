@@ -3,7 +3,7 @@
 // @description This is a sample server.
 
 // @host localhost:8080
-// @BasePath /
+// @BasePath /api
 // @query.collection.format multi
 
 package main

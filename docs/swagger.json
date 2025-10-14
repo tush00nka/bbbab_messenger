@@ -7,7 +7,7 @@
         "version": "0.1"
     },
     "host": "localhost:8080",
-    "basePath": "/",
+    "basePath": "/api",
     "paths": {
         "/chat/create": {
             "post": {
