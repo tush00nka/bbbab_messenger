@@ -46,7 +46,6 @@ require (
 )
 
 require (
-	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gorilla/mux v1.8.1
 	github.com/spf13/viper v1.20.1
 	github.com/swaggo/files v1.0.1 // indirect

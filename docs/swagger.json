@@ -1,560 +1,517 @@
 {
-    "swagger": "2.0",
-    "info": {
-        "description": "This is a sample server.",
-        "title": "BBBAB Messenger",
-        "contact": {},
-        "version": "0.1"
+  "swagger": "2.0",
+  "info": {
+    "description": "This is a sample server for BBBAB Messenger. It provides registration, login (with SMS or password), and real-time chat features (direct and group).",
+    "title": "BBBAB Messenger",
+    "contact": {
+      "name": "BBBAB API Support",
+      "email": "support@bbbab.local"
     },
-    "host": "localhost:8080",
-    "basePath": "/api",
-    "paths": {
-        "/chat/create": {
-            "post": {
-                "description": "Create a new group chat with users",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Create group chat",
-                "operationId": "create-group-chat",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Group Data",
-                        "name": "groupData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.createGroupRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/model.Chat"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
+    "version": "0.1"
+  },
+  "host": "localhost:8080",
+  "basePath": "/api",
+  "schemes": ["http"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "tags": [
+    { "name": "system", "description": "Health and status endpoints" },
+    { "name": "auth", "description": "Authentication and registration" },
+    { "name": "user", "description": "User-related operations" },
+    { "name": "chat", "description": "Chat and messaging features" }
+  ],
+  "paths": {
+    "/ping": {
+      "get": {
+        "tags": ["system"],
+        "summary": "Ping server",
+        "description": "Health check endpoint for monitoring service availability.",
+        "produces": ["application/json"],
+        "responses": {
+          "200": {
+            "description": "Server is alive",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string", "example": "pong" }
+              }
             }
-        },
-        "/confirmlogin": {
-            "post": {
-                "description": "Validate phone code and either create a new user or log into existing",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Confirm Login",
-                "operationId": "confirmlogin",
-                "parameters": [
-                    {
-                        "description": "Confirm Login data",
-                        "name": "confirmLoginData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.ConfirmLoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/handler.TokenResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/initlogin": {
-            "post": {
-                "description": "Init SMS login procedure",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "InitLogin",
-                "operationId": "initlogin",
-                "parameters": [
-                    {
-                        "description": "Login data",
-                        "name": "loginData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.SMSLoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/login": {
-            "post": {
-                "description": "Loing into account",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Login",
-                "operationId": "login",
-                "parameters": [
-                    {
-                        "description": "Login data",
-                        "name": "loginData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.LoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/handler.TokenResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/register": {
-            "post": {
-                "description": "Register an account",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Register",
-                "operationId": "register",
-                "parameters": [
-                    {
-                        "description": "Register data",
-                        "name": "registerData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.RegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/handler.TokenResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/search/{prompt}": {
-            "get": {
-                "description": "Search users by username",
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Search users",
-                "operationId": "search-user",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search Prompt",
-                        "name": "prompt",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.User"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/sendmessage": {
-            "post": {
-                "description": "Send messages between two users only (for now)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Send message to user",
-                "operationId": "send-message",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Message Data",
-                        "name": "msgData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.sendMessageRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/user/{id}": {
-            "get": {
-                "description": "Get user by id",
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Get user",
-                "operationId": "get-user",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.User"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    }
-                }
-            }
+          }
         }
+      }
     },
-    "definitions": {
-        "gorm.DeletedAt": {
-            "type": "object",
-            "properties": {
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "description": "Valid is true if Time is not NULL",
-                    "type": "boolean"
-                }
+    "/initlogin": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "InitLogin",
+        "description": "Start SMS login procedure by sending a verification code to the provided phone number.",
+        "operationId": "initlogin",
+        "parameters": [
+          {
+            "name": "loginData",
+            "in": "body",
+            "description": "Login data containing phone number",
+            "required": true,
+            "schema": { "$ref": "#/definitions/handler.SMSLoginRequest" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification code sent",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string", "example": "verification code sent" }
+              }
             }
-        },
-        "handler.ConfirmLoginRequest": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.LoginRequest": {
-            "type": "object",
-            "properties": {
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.RegisterRequest": {
-            "type": "object",
-            "properties": {
-                "confirmPassword": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.SMSLoginRequest": {
-            "type": "object",
-            "properties": {
-                "phone": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.TokenResponse": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.createGroupRequest": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "user_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "handler.sendMessageRequest": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "receiver_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "model.Chat": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "messages": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Message"
-                    }
-                },
-                "name": {
-                    "description": "опционально — имя группового чата",
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "users": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.User"
-                    }
-                }
-            }
-        },
-        "model.Message": {
-            "type": "object",
-            "properties": {
-                "chatID": {
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "senderID": {
-                    "type": "integer"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.User": {
-            "type": "object",
-            "properties": {
-                "chats": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Chat"
-                    }
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "phone": {
-                    "description": "такого формата мб 8-900-800-55-55",
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "response.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
+          },
+          "400": { "description": "Invalid request", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "500": { "description": "Internal error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
         }
+      }
+    },
+    "/confirmlogin": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Confirm Login",
+        "description": "Validate phone verification code and log the user in (creating a new account if necessary).",
+        "operationId": "confirmlogin",
+        "parameters": [
+          {
+            "name": "confirmLoginData",
+            "in": "body",
+            "required": true,
+            "description": "Phone number, verification code, and optional username",
+            "schema": { "$ref": "#/definitions/handler.ConfirmLoginRequest" }
+          }
+        ],
+        "responses": {
+          "201": { "description": "Logged in", "schema": { "$ref": "#/definitions/handler.TokenResponse" } },
+          "400": { "description": "Invalid or expired code", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "500": { "description": "Internal Server Error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/register": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Register",
+        "description": "Register a new account using username and password.",
+        "operationId": "register",
+        "parameters": [
+          {
+            "name": "registerData",
+            "in": "body",
+            "required": true,
+            "schema": { "$ref": "#/definitions/handler.RegisterRequest" }
+          }
+        ],
+        "responses": {
+          "201": { "description": "Created", "schema": { "$ref": "#/definitions/handler.TokenResponse" } },
+          "400": { "description": "Validation error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "409": { "description": "Conflict (username exists)", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "500": { "description": "Server error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Login",
+        "description": "Login using username and password credentials.",
+        "operationId": "login",
+        "parameters": [
+          {
+            "name": "loginData",
+            "in": "body",
+            "required": true,
+            "schema": { "$ref": "#/definitions/handler.LoginRequest" }
+          }
+        ],
+        "responses": {
+          "201": { "description": "OK", "schema": { "$ref": "#/definitions/handler.TokenResponse" } },
+          "400": { "description": "Bad Request", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "409": { "description": "Conflict", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "500": { "description": "Internal Server Error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/user/me": {
+      "get": {
+        "tags": ["user"],
+        "summary": "Get current user",
+        "description": "Return the authenticated user's profile.",
+        "parameters": [
+          { "name": "Bearer", "in": "header", "type": "string", "required": true, "description": "JWT token" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "schema": { "$ref": "#/definitions/model.User" } },
+          "401": { "description": "Unauthorized", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/user/{id}": {
+      "get": {
+        "tags": ["user"],
+        "summary": "Get user",
+        "description": "Retrieve user profile information by ID.",
+        "operationId": "get-user",
+        "parameters": [
+          { "name": "id", "in": "path", "type": "integer", "required": true, "description": "User ID" }
+        ],
+        "responses": {
+          "200": { "description": "User found", "schema": { "$ref": "#/definitions/model.User" } },
+          "404": { "description": "User not found", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "500": { "description": "Server error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/user/{id}/chats": {
+      "get": {
+        "tags": ["user"],
+        "summary": "List user chats",
+        "description": "Get all chats the user participates in.",
+        "parameters": [
+          { "name": "id", "in": "path", "type": "integer", "required": true, "description": "User ID" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/model.Chat" }
+            }
+          },
+          "404": { "description": "User or chats not found", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/search/{prompt}": {
+      "get": {
+        "tags": ["user"],
+        "summary": "Search users",
+        "description": "Search users by partial match of username.",
+        "operationId": "search-user",
+        "parameters": [
+          { "name": "prompt", "in": "path", "type": "string", "required": true, "description": "Search keyword" }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "schema": { "type": "array", "items": { "$ref": "#/definitions/model.User" } }
+          },
+          "404": { "description": "No users found", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/chat/create": {
+      "post": {
+        "tags": ["chat"],
+        "summary": "Create chat",
+        "description": "Create a new group chat with specified users or a direct chat.",
+        "operationId": "create-chat",
+        "parameters": [
+          { "name": "Bearer", "in": "header", "type": "string", "required": true, "description": "Auth Token" },
+          {
+            "name": "groupData",
+            "in": "body",
+            "required": true,
+            "schema": { "$ref": "#/definitions/handler.createGroupRequest" }
+          }
+        ],
+        "responses": {
+          "201": { "description": "Chat created", "schema": { "$ref": "#/definitions/model.Chat" } },
+          "400": { "description": "Invalid data", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/chat/list": {
+      "get": {
+        "tags": ["chat"],
+        "summary": "List all chats",
+        "description": "Get list of chats for the current authenticated user.",
+        "parameters": [
+          { "name": "Bearer", "in": "header", "type": "string", "required": true, "description": "JWT token" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/model.Chat" }
+            }
+          },
+          "401": { "description": "Unauthorized", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/chat/{id}/users": {
+      "get": {
+        "tags": ["chat"],
+        "summary": "Get users of chat",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "type": "integer", "description": "Chat ID" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/model.User" }
+            }
+          },
+          "400": { "description": "Invalid Chat ID", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/chat/{id}/add": {
+      "post": {
+        "tags": ["chat"],
+        "summary": "Add user to chat",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "type": "integer" },
+          {
+            "name": "addUser",
+            "in": "body",
+            "required": true,
+            "schema": { "$ref": "#/definitions/handler.addUserRequest" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User added",
+            "schema": {
+              "type": "object",
+              "properties": { "status": { "type": "string" } }
+            }
+          },
+          "400": { "description": "Bad Request", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/sendmessage": {
+      "post": {
+        "tags": ["chat"],
+        "summary": "Send message to user",
+        "description": "Send a message between two users. If chat does not exist, it will be created automatically.",
+        "operationId": "send-message",
+        "parameters": [
+          { "name": "Bearer", "in": "header", "type": "string", "required": true, "description": "Auth Token" },
+          {
+            "name": "msgData",
+            "in": "body",
+            "required": true,
+            "schema": { "$ref": "#/definitions/handler.sendMessageRequest" }
+          }
+        ],
+        "responses": {
+          "201": { "description": "Message created", "schema": { "$ref": "#/definitions/model.Message" } },
+          "400": { "description": "Invalid input", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/chat/{id}": {
+      "get": {
+        "tags": ["chat"],
+        "summary": "Get messages of chat",
+        "description": "Retrieve all messages from a chat by its ID. Cached messages are returned from Redis if available.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "integer",
+            "required": true,
+            "description": "Chat ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of messages",
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/model.Message" }
+            }
+          },
+          "400": { "description": "Invalid chat ID", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "500": { "description": "Server error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/chat/join/{chat_id}/{user_id}": {
+      "post": {
+        "tags": ["chat"],
+        "summary": "User joined chat",
+        "description": "Mark user as joined in chat (cache, Redis).",
+        "parameters": [
+          { "name": "chat_id", "in": "path", "type": "integer", "required": true, "description": "Chat ID" },
+          { "name": "user_id", "in": "path", "type": "integer", "required": true, "description": "User ID" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": { "type": "object", "properties": { "status": { "type": "string", "example": "user joined" } } }
+          },
+          "400": { "description": "Bad Request", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "500": { "description": "Internal Server Error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
+    },
+    "/chat/leave/{chat_id}/{user_id}": {
+      "post": {
+        "tags": ["chat"],
+        "summary": "User left chat",
+        "description": "Mark user as left in chat (persist and clear if last user).",
+        "parameters": [
+          { "name": "chat_id", "in": "path", "type": "integer", "required": true, "description": "Chat ID" },
+          { "name": "user_id", "in": "path", "type": "integer", "required": true, "description": "User ID" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": { "type": "object", "properties": { "status": { "type": "string", "example": "user left" } } }
+          },
+          "400": { "description": "Bad Request", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+          "500": { "description": "Internal Server Error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+        }
+      }
     }
+  },
+  "definitions": {
+    "gorm.DeletedAt": {
+      "type": "object",
+      "properties": {
+        "time": { "type": "string", "format": "date-time" },
+        "valid": { "type": "boolean", "description": "True if timestamp is not NULL" }
+      }
+    },
+    "handler.SMSLoginRequest": {
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string", "example": "+79990000000" }
+      }
+    },
+    "handler.ConfirmLoginRequest": {
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string" },
+        "code": { "type": "string" },
+        "username": { "type": "string" }
+      }
+    },
+    "handler.LoginRequest": {
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string" }
+      }
+    },
+    "handler.RegisterRequest": {
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "confirmPassword": { "type": "string" }
+      }
+    },
+    "handler.TokenResponse": {
+      "type": "object",
+      "properties": {
+        "token": { "type": "string" }
+      }
+    },
+    "handler.createGroupRequest": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "user_ids": { "type": "array", "items": { "type": "integer" } }
+      }
+    },
+    "handler.createChatRequest": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "user_ids": { "type": "array", "items": { "type": "integer" } }
+      }
+    },
+    "handler.sendMessageRequest": {
+      "type": "object",
+      "properties": {
+        "receiver_id": { "type": "integer" },
+        "message": { "type": "string" }
+      }
+    },
+    "handler.addUserRequest": {
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "integer" }
+      }
+    },
+    "model.User": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "deletedAt": { "$ref": "#/definitions/gorm.DeletedAt" },
+        "chats": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/model.Chat" }
+        }
+      }
+    },
+    "model.Chat": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "deletedAt": { "$ref": "#/definitions/gorm.DeletedAt" },
+        "users": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/model.User" }
+        },
+        "messages": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/model.Message" }
+        }
+      }
+    },
+    "model.Message": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer" },
+        "chatID": { "type": "integer" },
+        "senderID": { "type": "integer" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "deletedAt": { "$ref": "#/definitions/gorm.DeletedAt" }
+      }
+    },
+    "response.ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "message": { "type": "string" }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "Use `Bearer {token}`"
+    }
+  },
+  "security": [
+    { "BearerAuth": [] }
+  ],
+  "externalDocs": {
+    "description": "BBBAB Messenger GitHub Repository",
+    "url": "https://github.com/tush00nka/bbbab_messenger"
+  }
 }
