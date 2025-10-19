@@ -277,7 +277,7 @@ paths:
           schema:
             type: array
             items:
-              $ref: "#/definitions/model.Chat"
+              $ref: "#/definitions/handler.listChatsResponse"
         "401":
           description: "Unauthorized"
           schema:
@@ -356,6 +356,51 @@ paths:
             $ref: "#/definitions/model.Message"
         "400":
           description: "Invalid input"
+          schema:
+            $ref: "#/definitions/response.ErrorResponse"
+
+  /chat/{id}/messages:
+    get:
+      summary: "Получить сообщения чата"
+      description: "Получить сообщения чата с cursor-based пагинацией"
+      parameters:
+        - name: "id"
+          in: path
+          required: true
+          type: integer
+          description: ID чата
+        - name: "cursor"
+          in: query
+          required: false
+          type: string
+          format: date-time
+          description: Курсор для пагинации
+        - name: limit
+          in: query
+          required: false
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: Лимит сообщений на странице
+        - name: direction
+          in: query
+          required: false
+          type: string
+          enum: [older, newer]
+          default: older
+          description: Направление пагинации
+      responses:
+        '200':
+          description: Успешный ответ
+          schema:
+            $ref: '#/definitions/handler.ChatMessagesResponse'
+        "400":
+          description: "Invalid chat ID"
+          schema:
+            $ref: "#/definitions/response.ErrorResponse"
+        "500":
+          description: "Server error"
           schema:
             $ref: "#/definitions/response.ErrorResponse"
 
@@ -496,6 +541,46 @@ definitions:
     type: object
     properties:
       token: { type: string }
+
+  handler.ChatMessagesResponse:
+    type: object
+    properties:
+      data:
+        type: array
+        items:
+          $ref: '#/definitions/model.Message'
+      pagination:
+        $ref: '#/definitions/handler.PaginationInfo'
+      # meta:
+      #   $ref: '#/components/schemas/MetaInfo'
+
+  handler.PaginationInfo:
+      type: object
+      properties:
+        nextCursor:
+          type: string
+          format: date-time
+        previousCursor:
+          type: string
+          format: date-time
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+        limit:
+          type: integer
+        totalCount:
+          type: integer
+
+  handler.listChatsResponse:
+    type: object
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      createdAt: { type: string, format: date-time }
+      updatedAt: { type: string, format: date-time }
+      deletedAt: { $ref: "#/definitions/gorm.DeletedAt" }
+      lastMessage: { $ref: "#/definitions/model.Message" }
 
   handler.createGroupRequest:
     type: object

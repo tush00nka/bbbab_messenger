@@ -404,6 +404,36 @@ const docTemplate = `{
         "token": { "type": "string" }
       }
     },
+    "handler.listChatsResponse": {
+      "type": "object",
+      "properties": {
+          "createdAt": {
+              "type": "string"
+          },
+          "deletedAt": {
+              "$ref": "#/definitions/gorm.DeletedAt"
+          },
+          "id": {
+              "type": "integer"
+          },
+          "lastMessage": {
+            "$ref": "#/definitions/model.Message"
+          },
+          "name": {
+              "description": "опционально — имя группового чата",
+              "type": "string"
+          },
+          "updatedAt": {
+              "type": "string"
+          },
+          "users": {
+              "type": "array",
+              "items": {
+                  "$ref": "#/definitions/model.User"
+              }
+          }
+        }
+    },
     "handler.createGroupRequest": {
       "type": "object",
       "properties": {
