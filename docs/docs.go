@@ -171,27 +171,7 @@ const docTemplate = `{
         }
       }
     },
-    "/user/{id}/chats": {
-      "get": {
-        "tags": ["user"],
-        "summary": "List user chats",
-        "description": "Get all chats the user participates in.",
-        "parameters": [
-          { "name": "id", "in": "path", "type": "integer", "required": true, "description": "User ID" }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "schema": {
-              "type": "array",
-              "items": { "$ref": "#/definitions/model.Chat" }
-            }
-          },
-          "404": { "description": "User or chats not found", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
-        }
-      }
-    },
-    "/search/{prompt}": {
+    "/user/search/{prompt}": {
       "get": {
         "tags": ["user"],
         "summary": "Search users",
@@ -294,7 +274,7 @@ const docTemplate = `{
         }
       }
     },
-    "/sendmessage": {
+    "/chat/sendmessage": {
       "post": {
         "tags": ["chat"],
         "summary": "Send message to user",
