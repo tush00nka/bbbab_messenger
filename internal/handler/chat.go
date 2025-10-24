@@ -11,8 +11,10 @@ import (
 	"tush00nka/bbbab_messenger/internal/pkg/auth"
 	"tush00nka/bbbab_messenger/internal/pkg/httputils"
 	"tush00nka/bbbab_messenger/internal/service"
+	"tush00nka/bbbab_messenger/internal/ws"
 
 	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 )
 
 type createGroupRequest struct {
@@ -23,12 +25,18 @@ type createGroupRequest struct {
 type ChatHandler struct {
 	chatService      service.ChatService
 	chatCacheService *service.ChatCacheService
+	hub              *ws.Hub
 }
 
-func NewChatHandler(chatService service.ChatService, chatCacheService *service.ChatCacheService) *ChatHandler {
+func NewChatHandler(
+	chatService service.ChatService,
+	chatCacheService *service.ChatCacheService,
+	hub *ws.Hub,
+) *ChatHandler {
 	return &ChatHandler{
 		chatService:      chatService,
 		chatCacheService: chatCacheService,
+		hub:              hub,
 	}
 }
 
@@ -36,6 +44,7 @@ func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/sendmessage", h.sendMessage).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/{id}", h.getMessages).Methods("GET", "OPTIONS")
 	router.HandleFunc("/chat/create", h.createChat).Methods("POST", "OPTIONS")
+	router.HandleFunc("/chat/{id}/ws", h.wsChat).Methods("GET")
 }
 
 // helper: извлечь токен из заголовка Authorization: Bearer <token> или из заголовка Bearer
@@ -127,6 +136,10 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		if err := h.chatCacheService.SendMessage(chat, msg); err != nil {
 			log.Printf("warning: failed to cache message in redis: %v", err)
 		}
+	}
+
+	if h.hub != nil {
+		h.hub.BroadcastMessage(chat.ID, msg)
 	}
 
 	httputils.ResponseJSON(w, http.StatusCreated, msg)
@@ -278,4 +291,99 @@ func (h *ChatHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputils.ResponseJSON(w, http.StatusCreated, chat)
+}
+
+func (h *ChatHandler) wsChat(w http.ResponseWriter, r *http.Request) {
+	// 1) auth
+	tokenStr := extractTokenFromHeader(r)
+	if tokenStr == "" {
+		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
+		return
+	}
+	claims, err := auth.ValidateToken(tokenStr)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	// 2) chat id
+	vars := mux.Vars(r)
+	chatID64, err := strconv.ParseUint(vars["id"], 10, 64)
+	if err != nil || chatID64 == 0 {
+		httputils.ResponseError(w, http.StatusBadRequest, "invalid chat id")
+		return
+	}
+	chatID := uint(chatID64)
+
+	// 3) membership
+	ok, err := h.chatService.IsUserInChat(chatID, claims.UserID)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "failed to validate membership")
+		return
+	}
+	if !ok {
+		httputils.ResponseError(w, http.StatusForbidden, "user is not a member of this chat")
+		return
+	}
+
+	// 4) upgrade
+	conn, err := ws.Upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+
+	// 5) presence + история
+	room := h.hub.GetRoom(chatID)
+	ctx := r.Context()
+	client := ws.NewClient(ctx, conn, claims.UserID, chatID)
+	room.RegisterClient(client)
+
+	_ = h.chatCacheService.UserJoined(chatID, claims.UserID)
+
+	// история (redis->db)
+	messages, err := h.chatCacheService.GetMessages(chatID)
+	if err == nil && len(messages) == 0 {
+		if msgs, err2 := h.chatService.GetMessagesOfChat(chatID); err2 == nil {
+			messages = msgs
+		}
+	}
+	client.SendJSON(ws.OutEvent{
+		Type:     "history",
+		Messages: messages,
+	})
+
+	// 6) pumps
+	go client.WritePump()
+
+	handleIncoming := func(c *ws.Client, ev ws.InEvent) {
+		switch strings.ToLower(ev.Type) {
+		case "message":
+			txt := strings.TrimSpace(ev.Message)
+			if txt == "" {
+				c.SendJSON(ws.OutEvent{Type: "error", Message: "empty message"})
+				return
+			}
+			msg := model.Message{
+				ChatID:   c.ChatID,
+				SenderID: c.UserID,
+				Message:  txt,
+			}
+			if err := h.chatService.SendMessageToChat(&model.Chat{Model: gorm.Model{ID: c.ChatID}}, msg); err != nil {
+				c.SendJSON(ws.OutEvent{Type: "error", Message: "failed to persist message"})
+				return
+			}
+			if h.chatCacheService != nil {
+				_ = h.chatCacheService.SendMessage(&model.Chat{Model: gorm.Model{ID: c.ChatID}}, msg)
+			}
+			h.hub.BroadcastMessage(c.ChatID, msg)
+		default:
+			// ignore
+		}
+	}
+
+	client.ReadPump(handleIncoming)
+
+	// 7) cleanup
+	room.UnregisterClient(client)
+	_ = h.chatCacheService.UserLeft(chatID, claims.UserID)
 }

@@ -322,6 +322,37 @@ const docTemplate = `{
         }
       }
     },
+    "/chat/{id}/ws": {
+  "get": {
+    "tags": ["chat"],
+    "summary": "Join chat via WebSocket",
+    "description": ""Establishes a WebSocket connection to a chat. The connection enables real-time message exchange between all members of the chat"
+    "operationId": "chat-ws",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "type": "integer",
+        "required": true,
+        "description": "Chat ID to join"
+      },
+      {
+        "name": "Authorization",
+        "in": "header",
+        "type": "string",
+        "required": true,
+        "description": "Bearer JWT token"
+      }
+    ],
+    "responses": {
+      "101": {
+        "description": "Switching Protocols — WebSocket connection established"
+      },
+      "400": { "description": "Invalid Chat ID", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+      "401": { "description": "Missing or invalid token", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+      "403": { "description": "User not in chat", "schema": { "$ref": "#/definitions/response.ErrorResponse" } },
+      "500": { "description": "Internal Server Error", "schema": { "$ref": "#/definitions/response.ErrorResponse" } }
+    },
     "/chat/join/{chat_id}/{user_id}": {
       "post": {
         "tags": ["chat"],

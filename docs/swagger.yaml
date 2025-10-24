@@ -430,6 +430,69 @@ paths:
           description: "Server error"
           schema:
             $ref: "#/definitions/response.ErrorResponse"
+    /chat/{id}/ws:
+    get:
+      tags: ["chat"]
+      summary: "Join chat via WebSocket"
+      description: |
+        Upgrade the HTTP connection to WebSocket and join a specific chat room for real-time communication.
+
+        **Protocol:** `ws://` or `wss://` (depending on environment)
+
+        **Headers:**
+        - `Authorization: Bearer <JWT>`
+
+        **Client → Server examples:**
+        ```json
+        { "type": "message", "message": "Hello everyone!" }
+        ```
+
+        **Server → Client examples:**
+        ```json
+        { "type": "history", "messages": [ { "ChatID": 1, "SenderID": 2, "Message": "Hi!" } ] }
+        ```
+        ```json
+        { "type": "message", "message": { "ChatID": 1, "SenderID": 3, "Message": "Hey there!" } }
+        ```
+        ```json
+        { "type": "user_joined", "user_id": 2 }
+        ```
+        ```json
+        { "type": "user_left", "user_id": 2 }
+        ```
+
+        Once connected, all users in the chat will receive new messages, join, and leave events in real time.
+      operationId: "chat-ws"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          type: integer
+          description: "Chat ID to join"
+        - name: "Authorization"
+          in: "header"
+          required: true
+          type: string
+          description: "JWT token in Bearer format"
+      responses:
+        "101":
+          description: "Switching Protocols — WebSocket connection established"
+        "400":
+          description: "Invalid chat ID"
+          schema:
+            $ref: "#/definitions/response.ErrorResponse"
+        "401":
+          description: "Missing or invalid token"
+          schema:
+            $ref: "#/definitions/response.ErrorResponse"
+        "403":
+          description: "User not in chat"
+          schema:
+            $ref: "#/definitions/response.ErrorResponse"
+        "500":
+          description: "Internal Server Error"
+          schema:
+            $ref: "#/definitions/response.ErrorResponse"
 
   /chat/join/{chat_id}/{user_id}:
     post:

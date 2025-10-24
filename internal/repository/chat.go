@@ -13,6 +13,7 @@ type ChatRepository interface {
 	SendMessage(chat *model.Chat, message model.Message) error
 	GetMessages(chatID uint) ([]model.Message, error)
 	CreateGroup(chat *model.Chat, userIDs []uint) error
+	IsUserInChat(chatID, userID uint) (bool, error)
 }
 
 type chatRepository struct {
@@ -92,4 +93,12 @@ func (r *chatRepository) CreateGroup(chat *model.Chat, userIDs []uint) error {
 	}
 
 	return nil
+}
+
+func (r *chatRepository) IsUserInChat(chatID, userID uint) (bool, error) {
+	var exists int64
+	err := r.db.Table("chat_users").
+		Where("chat_id = ? AND user_id = ?", chatID, userID).
+		Count(&exists).Error
+	return exists > 0, err
 }

@@ -26,4 +26,5 @@ type ChatService interface {
 	SendMessageToChat(chat *model.Chat, message model.Message) error
 	GetMessagesOfChat(chatID uint) ([]model.Message, error)
 	CreateGroupChat(name string, userIDs []uint) (*model.Chat, error)
+	IsUserInChat(chatID uint, userID uint) (bool, error)
 }

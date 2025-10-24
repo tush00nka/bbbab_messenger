@@ -48,3 +48,7 @@ func (s *chatService) CreateGroupChat(name string, userIDs []uint) (*model.Chat,
 	}
 	return chat, nil
 }
+
+func (s *chatService) IsUserInChat(chatID, userID uint) (bool, error) {
+	return s.chatRepo.IsUserInChat(chatID, userID)
+}

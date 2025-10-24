@@ -314,6 +314,51 @@
         }
       }
     },
+    "/chat/{id}/ws": {
+  "get": {
+    "tags": ["chat"],
+    "summary": "Join chat via WebSocket",
+    "description": "Upgrade the connection to WebSocket and join a specific chat room for real-time communication.\n\n**Protocol:** `ws://` or `wss://` (depending on environment)\n\n**Headers:**\n- `Authorization: Bearer <JWT>`\n\n**Client → Server example:**\n```json\n{\"type\": \"message\", \"message\": \"Hello everyone!\"}\n```\n\n**Server → Client examples:**\n```json\n{\"type\": \"history\", \"messages\": [ {\"ChatID\": 1, \"SenderID\": 2, \"Message\": \"Hi!\"} ] }\n```\n```json\n{\"type\": \"message\", \"message\": {\"ChatID\": 1, \"SenderID\": 3, \"Message\": \"Hey there!\"}}\n```\n```json\n{\"type\": \"user_joined\", \"user_id\": 2}\n```\n```json\n{\"type\": \"user_left\", \"user_id\": 2}\n```\n\nThis endpoint allows users to send and receive messages in real time once connected.",
+    "operationId": "chat-ws",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "type": "integer",
+        "description": "Chat ID to join"
+      },
+      {
+        "name": "Authorization",
+        "in": "header",
+        "required": true,
+        "type": "string",
+        "description": "JWT token in Bearer format"
+      }
+    ],
+    "responses": {
+      "101": {
+        "description": "Switching Protocols — WebSocket connection established"
+      },
+      "400": {
+        "description": "Invalid chat ID",
+        "schema": { "$ref": "#/definitions/response.ErrorResponse" }
+      },
+      "401": {
+        "description": "Missing or invalid token",
+        "schema": { "$ref": "#/definitions/response.ErrorResponse" }
+      },
+      "403": {
+        "description": "User not in chat",
+        "schema": { "$ref": "#/definitions/response.ErrorResponse" }
+      },
+      "500": {
+        "description": "Internal Server Error",
+        "schema": { "$ref": "#/definitions/response.ErrorResponse" }
+      }
+    }
+  }
+    },
     "/chat/join/{chat_id}/{user_id}": {
       "post": {
         "tags": ["chat"],

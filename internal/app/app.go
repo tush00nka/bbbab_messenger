@@ -8,6 +8,7 @@ import (
 	"tush00nka/bbbab_messenger/internal/pkg/sms"
 	"tush00nka/bbbab_messenger/internal/repository"
 	"tush00nka/bbbab_messenger/internal/service"
+	"tush00nka/bbbab_messenger/internal/ws"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -44,8 +45,11 @@ func Run(cfg *config.Config) {
 	chatRepo := repository.NewChatRepository(db)
 	chatService := service.NewChatService(chatRepo)
 	chatCacheService := service.NewChatCacheService(cacheRepo, chatRepo)
-	chatHandler := handler.NewChatHandler(chatService, chatCacheService)
 
+	// WS Hub
+	hub := ws.NewHub()
+
+	chatHandler := handler.NewChatHandler(chatService, chatCacheService, hub)
 	server := NewServer(userHandler, chatHandler)
 	server.Run(cfg.ServerPort)
 }
