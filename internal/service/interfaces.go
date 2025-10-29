@@ -1,6 +1,9 @@
 package service
 
-import "tush00nka/bbbab_messenger/internal/model"
+import (
+	"context"
+	"tush00nka/bbbab_messenger/internal/model"
+)
 
 type UserService interface {
 	CreateUser(user *model.User) error
@@ -24,7 +27,8 @@ type ChatService interface {
 	GetChatForUsers(user1ID, user2ID uint) (*model.Chat, error)
 	AddUsersToChat(chatID uint, userIDs ...uint) error
 	SendMessageToChat(chat *model.Chat, message model.Message) error
-	GetMessagesOfChat(chatID uint) ([]model.Message, error)
+	// GetMessagesOfChat(chatID uint) ([]model.Message, error)
+	GetChatMessages(chatID uint, cursor string, limit int, direction string, ctx context.Context) ([]model.Message, bool, bool, *int64, error)
 	CreateGroupChat(name string, userIDs []uint) (*model.Chat, error)
 	IsUserInChat(chatID uint, userID uint) (bool, error)
 }

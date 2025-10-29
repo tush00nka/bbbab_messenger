@@ -11,11 +11,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Go последних версий предлагает заменять interface{} на any
 type OutEvent struct {
-	Type     string      `json:"type"`
-	Message  interface{} `json:"message,omitempty"`
-	Messages interface{} `json:"messages,omitempty"`
-	UserID   uint        `json:"user_id,omitempty"`
+	Type     string `json:"type"`
+	Message  any    `json:"message,omitempty"`
+	Messages any    `json:"messages,omitempty"`
+	UserID   uint   `json:"user_id,omitempty"`
 }
 
 type InEvent struct {

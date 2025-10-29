@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"tush00nka/bbbab_messenger/internal/model"
 	"tush00nka/bbbab_messenger/internal/repository"
 )
@@ -36,8 +37,18 @@ func (s *chatService) SendMessageToChat(chat *model.Chat, message model.Message)
 	return s.chatRepo.SendMessage(chat, message)
 }
 
-func (s *chatService) GetMessagesOfChat(chatID uint) ([]model.Message, error) {
-	return s.chatRepo.GetMessages(chatID)
+// func (s *chatService) GetMessagesOfChat(chatID uint) ([]model.Message, error) {
+// 	return s.chatRepo.GetMessages(chatID)
+// }
+
+func (s *chatService) GetChatMessages(
+	chatID uint,
+	cursor string,
+	limit int,
+	direction string,
+	ctx context.Context,
+) ([]model.Message, bool, bool, *int64, error) {
+	return s.chatRepo.GetChatMessages(chatID, cursor, limit, direction, ctx)
 }
 
 func (s *chatService) CreateGroupChat(name string, userIDs []uint) (*model.Chat, error) {

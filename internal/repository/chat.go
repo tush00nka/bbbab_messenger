@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"context"
+	"time"
 	"tush00nka/bbbab_messenger/internal/model"
 
 	"gorm.io/gorm"
@@ -11,7 +13,15 @@ type ChatRepository interface {
 	GetForUsers(user1ID, user2ID uint) (*model.Chat, error)
 	AddUser(chatID, userID uint) error
 	SendMessage(chat *model.Chat, message model.Message) error
-	GetMessages(chatID uint) ([]model.Message, error)
+
+	GetChatMessages(
+		chatID uint,
+		cursor string,
+		limit int,
+		direction string,
+		ctx context.Context,
+	) ([]model.Message, bool, bool, *int64, error)
+
 	CreateGroup(chat *model.Chat, userIDs []uint) error
 	IsUserInChat(chatID, userID uint) (bool, error)
 }
@@ -79,6 +89,72 @@ func (r *chatRepository) GetMessages(chatID uint) ([]model.Message, error) {
 	}
 
 	return messages, nil
+}
+
+func (r *chatRepository) GetChatMessages(chatID uint, cursor string, limit int, direction string, ctx context.Context) ([]model.Message, bool, bool, *int64, error) {
+
+	var messages []model.Message
+	query := r.db.WithContext(ctx).Model(&model.Message{}).
+		Where("chat_id = ? AND deleted_at IS NULL", chatID)
+
+	var totalCount int64
+	if err := query.Count(&totalCount).Error; err != nil {
+		return nil, false, false, nil, err
+	}
+
+	if cursor != "" {
+		cursorTime, err := time.Parse(time.RFC3339, cursor)
+		if err != nil {
+			return nil, false, false, nil, err
+		}
+
+		if direction == "older" {
+			// Получаем сообщения старше курсора
+			query = query.Where("created_at < ?", cursorTime)
+		} else {
+			// Получаем сообщения новее курсора
+			query = query.Where("created_at > ?", cursorTime)
+		}
+	}
+
+	// Определяем порядок сортировки
+	if direction == "older" {
+		query = query.Order("created_at DESC")
+	} else {
+		query = query.Order("created_at ASC")
+	}
+
+	// Выполняем запрос с лимитом +1 для проверки наличия следующей страницы
+	if err := query.Limit(limit + 1).Find(&messages).Error; err != nil {
+		return nil, false, false, nil, err
+	}
+
+	// Проверяем наличие следующей/предыдущей страницы
+	hasNext := false
+	hasPrevious := false
+
+	if direction == "older" {
+		hasNext = len(messages) > limit
+		if hasNext {
+			messages = messages[:limit] // Убираем лишний элемент
+		}
+		// Для направления "older" hasPrevious = true если передан курсор
+		hasPrevious = cursor != ""
+	} else {
+		hasPrevious = len(messages) > limit
+		if hasPrevious {
+			messages = messages[:limit]
+		}
+		// Для направления "newer" hasNext = true если передан курсор
+		hasNext = cursor != ""
+
+		// Реверсируем порядок для направления "newer"
+		for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+			messages[i], messages[j] = messages[j], messages[i]
+		}
+	}
+
+	return messages, hasNext, hasPrevious, &totalCount, nil
 }
 
 func (r *chatRepository) CreateGroup(chat *model.Chat, userIDs []uint) error {

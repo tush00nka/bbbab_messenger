@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"tush00nka/bbbab_messenger/internal/model"
 	"tush00nka/bbbab_messenger/internal/pkg/auth"
 	"tush00nka/bbbab_messenger/internal/pkg/httputils"
@@ -44,7 +45,8 @@ func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/sendmessage", h.sendMessage).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/{id}", h.getMessages).Methods("GET", "OPTIONS")
 	router.HandleFunc("/chat/create", h.createChat).Methods("POST", "OPTIONS")
-	router.HandleFunc("/chat/{id}/ws", h.wsChat).Methods("GET")
+	router.HandleFunc("/chat/{id}/ws", h.wsChat).Methods("GET", "OPTIONS")
+	router.HandleFunc("chat/{id}/messages", h.getMessages).Methods("GET", "OPTIONS")
 }
 
 // helper: извлечь токен из заголовка Authorization: Bearer <token> или из заголовка Bearer
@@ -145,7 +147,41 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 	httputils.ResponseJSON(w, http.StatusCreated, msg)
 }
 
-// GetMessages (как было) — берём из Redis, если пусто — из БД
+type GetChatMessagesRequest struct {
+	Cursor    string `json:"cursor" form:"cursor" query:"cursor"`
+	Limit     int    `json:"limit" form:"limit" query:"limit"`
+	Direction string `json:"direction" form:"direction" query:"direction"`
+}
+
+type PaginationInfo struct {
+	NextCursor     *string `json:"nextCursor,omitempty"`
+	PreviousCursor *string `json:"previousCursor,omitempty"`
+	HasNext        bool    `json:"hasNext"`
+	HasPrevious    bool    `json:"hasPrevious"`
+	Limit          int     `json:"limit"`
+	TotalCount     *int64  `json:"totalCount,omitempty"`
+}
+
+type GetChatMessagesResponse struct {
+	Data       []model.Message `json:"data"`
+	Pagination PaginationInfo  `json:"pagination"`
+}
+
+// GetChatMessages возвращает сообщения чата с пагинацией
+// @Summary Получить сообщения чата
+// @Description Получить сообщения чата с cursor-based пагинацией
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param id path int true "ID чата"
+// @Param cursor query string false "Курсор для пагинации"
+// @Param limit query int false "Лимит сообщений" minimum(1) maximum(100) default(20)
+// @Param direction query string false "Направление пагинации" Enums(older, newer) default(older)
+// @Success 200 {object} GetChatMessagesResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /chat/{id}/messages [get]
 func (h *ChatHandler) getMessages(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	chatID, err := strconv.Atoi(vars["id"])
@@ -154,21 +190,95 @@ func (h *ChatHandler) getMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	queryParams := r.URL.Query()
+	cursor := queryParams.Get("cursor")
+	limitStr := queryParams.Get("limit")
+	direction := queryParams.Get("direction")
+	if direction == "" {
+		direction = "older"
+	}
+
+	// Валидация direction
+	if direction != "older" && direction != "newer" {
+		httputils.ResponseError(w, http.StatusBadRequest, "Direction must be 'older' or 'newer'")
+		return
+	}
+
+	// Парсим limit
+	limit := 20
+	if limitStr != "" {
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil || limit < 1 || limit > 100 {
+			httputils.ResponseError(w, http.StatusBadRequest, "Limit must be between 1 and 100")
+			return
+		}
+	}
+
 	messages, err := h.chatCacheService.GetMessages(uint(chatID))
 	if err != nil {
 		httputils.ResponseError(w, http.StatusInternalServerError, "failed to get messages")
 		return
 	}
 
+	var hasNext bool
+	var hasPrevious bool
+	var totalCount *int64
+
 	if len(messages) == 0 {
-		messages, err = h.chatService.GetMessagesOfChat(uint(chatID))
+		messages, hasNext, hasPrevious, totalCount, err = h.chatService.GetChatMessages(uint(chatID), cursor, limit, direction, r.Context())
 		if err != nil {
 			httputils.ResponseError(w, http.StatusInternalServerError, "failed to get messages from DB")
 			return
 		}
+	} else {
+		response := GetChatMessagesResponse{
+			Data:       messages,
+			Pagination: PaginationInfo{},
+		}
+		httputils.ResponseJSON(w, 200, response)
+		return
 	}
 
-	httputils.ResponseJSON(w, http.StatusOK, messages)
+	if len(messages) == 0 {
+		response := GetChatMessagesResponse{
+			Data: []model.Message{},
+			Pagination: PaginationInfo{
+				Limit:       limit,
+				HasNext:     false,
+				HasPrevious: false,
+			},
+		}
+		httputils.ResponseJSON(w, 200, response)
+		return
+	}
+
+	// Формируем курсоры
+	var nextCursor, previousCursor *string
+
+	if hasNext {
+		lastMessageTime := messages[len(messages)-1].CreatedAt.Format(time.RFC3339)
+		nextCursor = &lastMessageTime
+	}
+
+	if hasPrevious {
+		firstMessageTime := messages[0].CreatedAt.Format(time.RFC3339)
+		previousCursor = &firstMessageTime
+	}
+
+	// Формируем ответ
+	response := GetChatMessagesResponse{
+		Data: messages,
+		Pagination: PaginationInfo{
+			NextCursor:     nextCursor,
+			PreviousCursor: previousCursor,
+			HasNext:        hasNext,
+			HasPrevious:    hasPrevious,
+			Limit:          limit,
+			TotalCount:     totalCount,
+		},
+	}
+
+	httputils.ResponseJSON(w, http.StatusOK, response)
 }
 
 type createChatRequest struct {
@@ -343,9 +453,11 @@ func (h *ChatHandler) wsChat(w http.ResponseWriter, r *http.Request) {
 	// история (redis->db)
 	messages, err := h.chatCacheService.GetMessages(chatID)
 	if err == nil && len(messages) == 0 {
-		if msgs, err2 := h.chatService.GetMessagesOfChat(chatID); err2 == nil {
-			messages = msgs
-		}
+		// todo: rework to support pagination
+
+		// if msgs, err2 := h.chatService.GetMessagesOfChat(chatID); err2 == nil {
+		// 	messages = msgs
+		// }
 	}
 	client.SendJSON(ws.OutEvent{
 		Type:     "history",
