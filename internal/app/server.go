@@ -6,6 +6,7 @@ import (
 	"time"
 	"tush00nka/bbbab_messenger/internal/handler"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -31,6 +32,13 @@ func NewServer(userHandler *handler.UserHandler, chatHandler *handler.ChatHandle
 func (s *Server) setupRoutes() {
 	api := s.router.PathPrefix("/api").Subrouter()
 
+	cors := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}), // Разрешить все источники
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With"}),
+		handlers.AllowCredentials(),
+	)
+
 	// Routes для пользователей
 	s.userHandler.RegisterRoutes(api)
 
@@ -49,6 +57,8 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./docs/swagger.json")
 	})
+
+	http.Handle("/", cors(api))
 }
 
 func (s *Server) Run(port string) {
