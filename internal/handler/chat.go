@@ -47,6 +47,8 @@ func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/chat/create", h.createChat).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/{id}/ws", h.wsChat).Methods("GET", "OPTIONS")
 	router.HandleFunc("chat/{id}/messages", h.getMessages).Methods("GET", "OPTIONS")
+	router.HandleFunc("/chat/join/{chat_id:[0-9]+}/{user_id:[0-9]+}", h.UserJoined).Methods("POST", "OPTIONS")
+	router.HandleFunc("/chat/leave/{chat_id:[0-9]+}/{user_id:[0-9]+}", h.UserLeft).Methods("POST", "OPTIONS")
 }
 
 // helper: извлечь токен из заголовка Authorization: Bearer <token> или из заголовка Bearer
