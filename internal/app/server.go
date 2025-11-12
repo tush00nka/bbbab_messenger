@@ -30,22 +30,23 @@ func NewServer(userHandler *handler.UserHandler, chatHandler *handler.ChatHandle
 }
 
 func (s *Server) setupRoutes() {
-	api := s.router.PathPrefix("/api").Subrouter()
 
 	cors := handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}), // Разрешить все источники
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With"}),
-		handlers.AllowCredentials(),
+		// handlers.AllowCredentials(),
 	)
+
+	s.router.Use(cors)
+
+	api := s.router.PathPrefix("/api").Subrouter()
 
 	// Routes для пользователей
 	s.userHandler.RegisterRoutes(api)
 
 	// Routes для чатов
 	s.chatHandler.RegisterRoutes(api)
-	api.HandleFunc("/chat/join/{chat_id:[0-9]+}/{user_id:[0-9]+}", s.chatHandler.UserJoined).Methods("POST")
-	api.HandleFunc("/chat/leave/{chat_id:[0-9]+}/{user_id:[0-9]+}", s.chatHandler.UserLeft).Methods("POST")
 
 	// Swagger
 	swaggerHandler := httpSwagger.Handler(
@@ -58,7 +59,6 @@ func (s *Server) setupRoutes() {
 		http.ServeFile(w, r, "./docs/swagger.json")
 	})
 
-	http.Handle("/", cors(api))
 }
 
 func (s *Server) Run(port string) {
