@@ -47,6 +47,7 @@ func (s *Server) setupRoutes() {
 
 	// Routes для чатов
 	s.chatHandler.RegisterRoutes(api)
+	api.HandleFunc("/ping", handler.Ping)
 
 	// Swagger
 	swaggerHandler := httpSwagger.Handler(
