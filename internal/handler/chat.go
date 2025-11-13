@@ -26,17 +26,20 @@ type createGroupRequest struct {
 type ChatHandler struct {
 	chatService      service.ChatService
 	chatCacheService *service.ChatCacheService
+	s3Service        service.S3Service
 	hub              *ws.Hub
 }
 
 func NewChatHandler(
 	chatService service.ChatService,
 	chatCacheService *service.ChatCacheService,
+	s3Service service.S3Service,
 	hub *ws.Hub,
 ) *ChatHandler {
 	return &ChatHandler{
 		chatService:      chatService,
 		chatCacheService: chatCacheService,
+		s3Service:        s3Service,
 		hub:              hub,
 	}
 }

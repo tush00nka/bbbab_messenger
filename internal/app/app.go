@@ -45,11 +45,15 @@ func Run(cfg *config.Config) {
 	chatRepo := repository.NewChatRepository(db)
 	chatService := service.NewChatService(chatRepo)
 	chatCacheService := service.NewChatCacheService(cacheRepo, chatRepo)
+	s3Service, err := service.NewS3Service(cfg)
+	if err != nil {
+		log.Fatal("Failed to create S3 service", err)
+	}
 
 	// WS Hub
 	hub := ws.NewHub()
 
-	chatHandler := handler.NewChatHandler(chatService, chatCacheService, hub)
+	chatHandler := handler.NewChatHandler(chatService, chatCacheService, s3Service, hub)
 	server := NewServer(userHandler, chatHandler)
 	server.Run(cfg.ServerPort)
 }
