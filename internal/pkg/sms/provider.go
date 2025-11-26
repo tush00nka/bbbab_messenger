@@ -24,5 +24,5 @@ func (p *MockSMSProvider) SendSMS(phone, message string) error {
 }
 
 func GenerateVerificationCode() string {
-	return fmt.Sprintf("%04d", rand.Intn(10000))
+	return fmt.Sprintf("%05d", rand.Intn(100000))
 }
