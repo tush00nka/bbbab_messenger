@@ -18,7 +18,7 @@ type App struct {
 
 func Run(cfg *config.Config) {
 	// Postgres
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable readOnly=false",
 		cfg.Host, cfg.User, cfg.Password, cfg.Name, cfg.DBPort)
 	db, err := repository.NewDB(dsn)
 	if err != nil {

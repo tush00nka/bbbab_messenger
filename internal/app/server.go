@@ -71,5 +71,5 @@ func (s *Server) Run(port string) {
 	}
 
 	log.Printf("Server starting on port %s", port)
-	log.Fatal(srv.ListenAndServe())
+	log.Fatal(srv.ListenAndServeTLS("./certs/localhost+2.pem", "./certs/localhost+2-key.pem"))
 }
