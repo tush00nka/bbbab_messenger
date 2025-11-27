@@ -118,7 +118,7 @@ func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
 		httputils.ResponseError(w, http.StatusBadRequest, "Invalid or expired code")
 	}
 
-	fmt.Println(verification.Code)
+	// fmt.Println(verification.Code)
 
 	if verification.Code != request.Code {
 		h.smsRepo.DeleteVerificationCode(request.Phone)
