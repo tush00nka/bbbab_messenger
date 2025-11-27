@@ -33,6 +33,7 @@ type ChatService interface {
 	GetChatMessages(chatID uint, cursor string, limit int, direction string, ctx context.Context) ([]model.Message, bool, bool, *int64, error)
 	CreateGroupChat(name string, userIDs []uint) (*model.Chat, error)
 	IsUserInChat(chatID uint, userID uint) (bool, error)
+	GetChatsForUser(userID uint) (*[]model.Chat, error)
 }
 
 type S3Service interface {

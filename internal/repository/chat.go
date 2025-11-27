@@ -14,6 +14,8 @@ type ChatRepository interface {
 	AddUser(chatID, userID uint) error
 	SendMessage(chat *model.Chat, message model.Message) error
 
+	GetChatsForUser(userID uint) (*[]model.Chat, error)
+
 	GetChatMessages(
 		chatID uint,
 		cursor string,
@@ -177,4 +179,28 @@ func (r *chatRepository) IsUserInChat(chatID, userID uint) (bool, error) {
 		Where("chat_id = ? AND user_id = ?", chatID, userID).
 		Count(&exists).Error
 	return exists > 0, err
+}
+
+func (r *chatRepository) GetChatsForUser(userID uint) (*[]model.Chat, error) {
+	var chats []model.Chat
+
+	err := r.db.Table("chats").Find(&chats).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var filteredChats []model.Chat
+
+	// stupid but for now it's fine
+	for _, chat := range chats {
+		inChat, err := r.IsUserInChat(userID, chat.ID)
+		if err != nil {
+			return nil, err
+		}
+		if inChat {
+			filteredChats = append(filteredChats, chat)
+		}
+	}
+
+	return &filteredChats, nil
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"slices"
@@ -48,6 +49,7 @@ func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/sendmessage", h.sendMessage).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/{id}", h.getMessages).Methods("GET", "OPTIONS")
 	router.HandleFunc("/chat/create", h.createChat).Methods("POST", "OPTIONS")
+	router.HandleFunc("/chat/list", h.listChats).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/{id}/ws", h.wsChat).Methods("GET", "OPTIONS")
 	router.HandleFunc("/chat/{id}/messages", h.getMessages).Methods("GET", "OPTIONS")
 	router.HandleFunc("/chat/join/{chat_id:[0-9]+}/{user_id:[0-9]+}", h.UserJoined).Methods("POST", "OPTIONS")
@@ -503,4 +505,54 @@ func (h *ChatHandler) wsChat(w http.ResponseWriter, r *http.Request) {
 	// 7) cleanup
 	room.UnregisterClient(client)
 	_ = h.chatCacheService.UserLeft(chatID, claims.UserID)
+}
+
+type ListChatsResponse struct {
+	Name        string
+	LastMessage model.Message
+	gorm.Model
+}
+
+// @Summary List chats
+// @Description List chats of user
+// @ID chat-list
+// @Accept json
+// @Produce json
+// @Param Bearer header string true "Auth Token"
+// @Param groupData body createGroupRequest true "Group Data"
+// @Success 200 {object} []ListChatResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Failure 401 {object} response.ErrorResponse
+// @Router /chat/list [post]
+func (h *ChatHandler) listChats(w http.ResponseWriter, r *http.Request) {
+	tokenStr := extractTokenFromHeader(r)
+	if tokenStr == "" {
+		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
+		return
+	}
+	claims, err := auth.ValidateToken(tokenStr)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	userID := claims.UserID
+
+	chats, err := h.chatService.GetChatsForUser(userID)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, fmt.Sprintf("failed to get chat list for user with ID: %d", userID))
+		return
+	}
+
+	var responses []ListChatsResponse
+
+	for _, chat := range *chats {
+		responses = append(responses, ListChatsResponse{
+			Name:        chat.Name,
+			LastMessage: chat.Messages[len(chat.Messages)-1],
+			Model:       chat.Model,
+		})
+	}
+
+	httputils.ResponseJSON(w, http.StatusOK, responses)
 }
