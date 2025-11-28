@@ -6,5 +6,15 @@
 docker-compose up
 ```
 
+## Go Build Cache
+The project uses Docker volumes to cache Go compilation artifacts between container rebuilds, significantly speeding up subsequent builds:
+- `go-build-cache`: Stores compiled packages and build cache
+- `go-mod-cache`: Stores downloaded Go modules
+
+These volumes are automatically created and managed by Docker Compose. To clear the cache if needed:
+```bash
+docker volume rm bbbab_messenger_go-build-cache bbbab_messenger_go-mod-cache
+```
+
 # Docs
 Swagger docs are available at /swagger
