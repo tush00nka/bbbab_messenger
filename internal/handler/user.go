@@ -32,6 +32,7 @@ func (c *UserHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/login", c.loginUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/register", c.registerUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/user/{id}", c.getUser).Methods("GET", "OPTIONS")
+	router.HandleFunc("/user/me", c.getCurrentUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET", "OPTIONS")
 
 	// router.HandleFunc("/sms", c.sendSMS).Methods("POST", "OPTIONS")
@@ -339,6 +340,37 @@ func (h *UserHandler) getUser(w http.ResponseWriter, r *http.Request) {
 	// if err == nil {
 	// data.CurrentUsersPage = user.ID == currentUserID
 	// }
+
+	user.SanitizePassword()
+	httputils.ResponseJSON(w, http.StatusOK, user)
+}
+
+// @Summary Get current user
+// @Description Get current user by token
+// @ID get-current-user
+// @Produce  json
+// @Success 200 {object} model.User
+// @Failure 401 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Param Bearer header string true "Auth Token"
+// @Router /user/me [get]
+func (h *UserHandler) getCurrentUser(w http.ResponseWriter, r *http.Request) {
+	tokenStr := extractTokenFromHeader(r)
+	if tokenStr == "" {
+		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
+		return
+	}
+	claims, err := auth.ValidateToken(tokenStr)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	user, err := h.userService.GetUserByID(uint(claims.UserID))
+	if err != nil {
+		httputils.ResponseError(w, http.StatusNotFound, "No such user")
+		return
+	}
 
 	user.SanitizePassword()
 	httputils.ResponseJSON(w, http.StatusOK, user)

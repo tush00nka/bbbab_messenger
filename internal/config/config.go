@@ -19,6 +19,13 @@ type Config struct {
 
 	RedisPort     string `mapstructure:"REDIS_PORT"`
 	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
+
+	S3Region          string `mapstructure:"S3_REGION"`
+	S3AccessKeyID     string `mapstructure:"S3_ACCESS_KEY_ID"`
+	S3SecretAccessKey string `mapstructure:"S3_SECRET_KEY_ACCESS"`
+	S3BucketName      string `mapstructure:"S3_BUCKET_NAME"`
+	S3Endpoint        string `mapstructure:"S3_ENDPOINT"`
+	S3UseSSL          bool   `mapstructure:"S3_USE_SSL"`
 }
 
 func Load() (*Config, error) {

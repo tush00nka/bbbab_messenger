@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"io"
+	"time"
 	"tush00nka/bbbab_messenger/internal/model"
 )
 
@@ -31,4 +33,11 @@ type ChatService interface {
 	GetChatMessages(chatID uint, cursor string, limit int, direction string, ctx context.Context) ([]model.Message, bool, bool, *int64, error)
 	CreateGroupChat(name string, userIDs []uint) (*model.Chat, error)
 	IsUserInChat(chatID uint, userID uint) (bool, error)
+	GetChatsForUser(userID uint) (*[]model.Chat, error)
+}
+
+type S3Service interface {
+	UploadFile(ctx context.Context, file io.Reader, filename, contentType, userID, chatID string) (*model.FileMetadata, error)
+	GeneratePresignedURL(ctx context.Context, fileMetadata *model.FileMetadata, expires time.Duration) (string, error)
+	HealthCheck(ctx context.Context) error
 }

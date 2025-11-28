@@ -30,12 +30,13 @@ func NewServer(userHandler *handler.UserHandler, chatHandler *handler.ChatHandle
 }
 
 func (s *Server) setupRoutes() {
-
 	cors := handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}), // Разрешить все источники
+		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With"}),
-		// handlers.AllowCredentials(),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With", "Origin", "Accept"}),
+		handlers.ExposedHeaders([]string{"Content-Length"}),
+		handlers.AllowCredentials(),
+		handlers.MaxAge(86400),
 	)
 
 	s.router.Use(cors)
@@ -47,6 +48,7 @@ func (s *Server) setupRoutes() {
 
 	// Routes для чатов
 	s.chatHandler.RegisterRoutes(api)
+	api.HandleFunc("/ping", handler.Ping)
 
 	// Swagger
 	swaggerHandler := httpSwagger.Handler(
@@ -58,24 +60,17 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./docs/swagger.json")
 	})
-
 }
 
 func (s *Server) Run(port string) {
-	// Apply CORS middleware to the router
-	cors := handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With"}),
-	)
-
 	srv := &http.Server{
-		Handler:      cors(s.router),
+		Handler:      s.router,
 		Addr:         ":" + port,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
 
 	log.Printf("Server starting on port %s", port)
+	// log.Fatal(srv.ListenAndServeTLS("./certs/localhost+2.pem", "./certs/localhost+2-key.pem"))
 	log.Fatal(srv.ListenAndServe())
 }

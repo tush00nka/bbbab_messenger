@@ -63,3 +63,7 @@ func (s *chatService) CreateGroupChat(name string, userIDs []uint) (*model.Chat,
 func (s *chatService) IsUserInChat(chatID, userID uint) (bool, error) {
 	return s.chatRepo.IsUserInChat(chatID, userID)
 }
+
+func (s *chatService) GetChatsForUser(userID uint) (*[]model.Chat, error) {
+	return s.chatRepo.GetChatsForUser(userID)
+}
