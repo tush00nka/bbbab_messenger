@@ -13,6 +13,9 @@ services:
       - redis
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
+    volumes:
+      - go-build-cache:/root/.cache/go-build
+      - go-mod-cache:/go/pkg/mod
 
   redis:
     image: redis:7.4-alpine
@@ -65,4 +68,8 @@ volumes:
   redis:
     driver: local
   postgres-db: {}
+  go-build-cache:
+    driver: local
+  go-mod-cache:
+    driver: local
   minio-data:
