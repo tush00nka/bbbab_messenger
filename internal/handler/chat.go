@@ -294,6 +294,19 @@ type createChatRequest struct {
 	UserIDs []uint `json:"user_ids"`
 }
 
+// @Summary Create direct chat
+// @Description Create a new direct chat with another user
+// @ID create-chat
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param Bearer header string true "Auth Token"
+// @Param chatData body createChatRequest true "Chat Data"
+// @Success 201 {object} map[string]uint
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 401 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /chat/create [post]
 func (h *ChatHandler) createChat(w http.ResponseWriter, r *http.Request) {
 	tokenStr := extractTokenFromHeader(r)
 	if tokenStr == "" {
@@ -334,6 +347,18 @@ func (h *ChatHandler) createChat(w http.ResponseWriter, r *http.Request) {
 	httputils.ResponseJSON(w, http.StatusCreated, map[string]uint{"chat_id": chat.ID})
 }
 
+// @Summary User joined chat
+// @Description Notify that user joined chat (for presence tracking)
+// @ID user-joined
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param chat_id path int true "Chat ID"
+// @Param user_id path int true "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /chat/join/{chat_id}/{user_id} [post]
 func (h *ChatHandler) UserJoined(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	chatID, err1 := strconv.Atoi(vars["chat_id"])
@@ -351,6 +376,18 @@ func (h *ChatHandler) UserJoined(w http.ResponseWriter, r *http.Request) {
 	httputils.ResponseJSON(w, http.StatusOK, map[string]string{"status": "user joined"})
 }
 
+// @Summary User left chat
+// @Description Notify that user left chat (for presence tracking)
+// @ID user-left
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param chat_id path int true "Chat ID"
+// @Param user_id path int true "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /chat/leave/{chat_id}/{user_id} [post]
 func (h *ChatHandler) UserLeft(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	chatID, err1 := strconv.Atoi(vars["chat_id"])
@@ -412,6 +449,18 @@ func (h *ChatHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 	httputils.ResponseJSON(w, http.StatusCreated, chat)
 }
 
+// @Summary WebSocket chat connection
+// @Description Establish WebSocket connection for real-time chat
+// @ID ws-chat
+// @Tags chat
+// @Param id path int true "Chat ID"
+// @Param Bearer header string true "Auth Token"
+// @Success 101 {object} nil "Switching Protocols"
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 401 {object} response.ErrorResponse
+// @Failure 403 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /chat/{id}/ws [get]
 func (h *ChatHandler) wsChat(w http.ResponseWriter, r *http.Request) {
 	// 1) auth
 	tokenStr := extractTokenFromHeader(r)

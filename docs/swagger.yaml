@@ -87,6 +87,15 @@ definitions:
       token:
         type: string
     type: object
+  handler.createChatRequest:
+    properties:
+      name:
+        type: string
+      user_ids:
+        items:
+          type: integer
+        type: array
+    type: object
   handler.createGroupRequest:
     properties:
       name:
@@ -228,6 +237,43 @@ paths:
       summary: Получить сообщения чата
       tags:
       - chat
+  /chat/{id}/ws:
+    get:
+      description: Establish WebSocket connection for real-time chat
+      operationId: ws-chat
+      parameters:
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Auth Token
+        in: header
+        name: Bearer
+        required: true
+        type: string
+      responses:
+        "101":
+          description: Switching Protocols
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: WebSocket chat connection
+      tags:
+      - chat
   /chat/create:
     post:
       consumes:
@@ -258,6 +304,80 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Create group chat
+      tags:
+      - chat
+  /chat/join/{chat_id}/{user_id}:
+    post:
+      consumes:
+      - application/json
+      description: Notify that user joined chat (for presence tracking)
+      operationId: user-joined
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chat_id
+        required: true
+        type: integer
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: User joined chat
+      tags:
+      - chat
+  /chat/leave/{chat_id}/{user_id}:
+    post:
+      consumes:
+      - application/json
+      description: Notify that user left chat (for presence tracking)
+      operationId: user-left
+      parameters:
+      - description: Chat ID
+        in: path
+        name: chat_id
+        required: true
+        type: integer
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: User left chat
       tags:
       - chat
   /chat/list:
