@@ -53,6 +53,7 @@ type SMSLoginRequest struct {
 // @Summary InitLogin
 // @Description Init SMS login procedure
 // @ID initlogin
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {object} map[string]string
@@ -96,6 +97,7 @@ type ConfirmLoginRequest struct {
 // @Summary Confirm Login
 // @Description Validate phone code and either create a new user or log into existing
 // @ID confirmlogin
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 201 {object} TokenResponse
@@ -187,6 +189,7 @@ func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
 // @Summary Register
 // @Description Register an account
 // @ID register
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 201 {object} TokenResponse
@@ -254,6 +257,7 @@ type RegisterRequest struct {
 // @Summary Login
 // @Description Loing into account
 // @ID login
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 201 {object} TokenResponse
@@ -315,6 +319,7 @@ type LoginRequest struct {
 // @Summary Get user
 // @Description Get user by id
 // @ID get-user
+// @Tags user
 // @Produce  json
 // @Success 200 {object} model.User
 // @Failure 404 {object} response.ErrorResponse
@@ -348,6 +353,7 @@ func (h *UserHandler) getUser(w http.ResponseWriter, r *http.Request) {
 // @Summary Get current user
 // @Description Get current user by token
 // @ID get-current-user
+// @Tags user
 // @Produce  json
 // @Success 200 {object} model.User
 // @Failure 401 {object} response.ErrorResponse
@@ -379,6 +385,7 @@ func (h *UserHandler) getCurrentUser(w http.ResponseWriter, r *http.Request) {
 // @Summary Search users
 // @Description Search users by username
 // @ID search-user
+// @Tags user
 // @Produce  json
 // @Success 200 {object} []model.User
 // @Failure 404 {object} response.ErrorResponse
@@ -404,6 +411,7 @@ func (h *UserHandler) searchUser(w http.ResponseWriter, r *http.Request) {
 // @Summary Send SMS
 // @Description Send SMS to phone number
 // @ID sms
+// @Tags user
 // @Accept json
 // @Success 200
 // @Failure 400 {object} response.ErrorResponse

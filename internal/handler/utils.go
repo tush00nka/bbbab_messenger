@@ -6,7 +6,7 @@ import (
 )
 
 type PongResponse struct {
-	message string
+	Message string `json:"message"`
 }
 
 // Ping
@@ -18,5 +18,5 @@ type PongResponse struct {
 // @Failure 404
 // @Router /ping [get]
 func Ping(w http.ResponseWriter, r *http.Request) {
-	httputils.ResponseJSON(w, 200, PongResponse{message: "Pong"})
+	httputils.ResponseJSON(w, 200, PongResponse{Message: "Pong"})
 }

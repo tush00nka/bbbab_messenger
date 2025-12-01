@@ -77,6 +77,7 @@ type sendMessageRequest struct {
 // @Summary Send message to user
 // @Description Send messages between two users only (for now)
 // @ID send-message
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param Bearer header string true "Auth Token"
@@ -185,9 +186,9 @@ type GetChatMessagesResponse struct {
 // @Param limit query int false "Лимит сообщений" minimum(1) maximum(100) default(20)
 // @Param direction query string false "Направление пагинации" Enums(older, newer) default(older)
 // @Success 200 {object} GetChatMessagesResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
 // @Router /chat/{id}/messages [get]
 func (h *ChatHandler) getMessages(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -370,6 +371,7 @@ func (h *ChatHandler) UserLeft(w http.ResponseWriter, r *http.Request) {
 // @Summary Create group chat
 // @Description Create a new group chat with users
 // @ID create-group-chat
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param Bearer header string true "Auth Token"
@@ -516,11 +518,12 @@ type ListChatsResponse struct {
 // @Summary List chats
 // @Description List chats of user
 // @ID chat-list
+// @Tags chat
 // @Accept json
 // @Produce json
 // @Param Bearer header string true "Auth Token"
 // @Param groupData body createGroupRequest true "Group Data"
-// @Success 200 {object} []ListChatResponse
+// @Success 200 {object} []ListChatsResponse
 // @Failure 500 {object} response.ErrorResponse
 // @Failure 401 {object} response.ErrorResponse
 // @Router /chat/list [post]
