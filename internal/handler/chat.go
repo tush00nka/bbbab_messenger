@@ -69,21 +69,32 @@ func extractTokenFromHeader(r *http.Request) string {
 	return authHeader
 }
 
+// LEGACY
+// type sendMessageRequest struct {
+// 	ReceiverID uint   `json:"receiver_id"`
+// 	Message    string `json:"message"`
+// }
+
 type sendMessageRequest struct {
-	ReceiverID uint   `json:"receiver_id"`
+	ReceiverID uint   `json:"receiver_id"` // ID пользователя или чата
+	ChatID     uint   `json:"chat_id"`     // Опционально: ID существующего чата
 	Message    string `json:"message"`
+	Type       string `json:"type"` // Тип сообщения: "text", "image", "file" и т.д.
 }
 
-// @Summary Send message to user
-// @Description Send messages between two users only (for now)
+// @Summary Send message to user or group
+// @Description Send message to existing chat or create new direct chat with user
 // @ID send-message
 // @Tags chat
 // @Accept json
 // @Produce json
 // @Param Bearer header string true "Auth Token"
 // @Param msgData body sendMessageRequest true "Message Data"
-// @Success 200
+// @Success 201 {object} model.Message
 // @Failure 400 {object} response.ErrorResponse
+// @Failure 401 {object} response.ErrorResponse
+// @Failure 403 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
 // @Router /sendmessage [post]
 func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 	tokenStr := extractTokenFromHeader(r)
@@ -110,50 +121,181 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chat, err := h.chatService.GetChatForUsers(claims.UserID, request.ReceiverID)
+	// Получаем или создаем чат для двух пользователей
+	var chat *model.Chat
+	var isNewChat bool
+
+	// Пытаемся найти существующий личный чат между пользователями
+	existingChats, err := h.chatService.GetChatsForUser(claims.UserID)
 	if err != nil {
-		httputils.ResponseError(w, http.StatusInternalServerError, "failed to get chat for users")
+		httputils.ResponseError(w, http.StatusInternalServerError, "failed to get user chats")
 		return
 	}
 
+	// Ищем существующий личный чат с этим пользователем
+	for _, existingChat := range *existingChats {
+		if existingChat.Name == "" { // Личные чаты не имеют имени
+			users, err := h.chatService.GetChatUsers(existingChat.ID)
+			if err != nil {
+				continue
+			}
+
+			// Проверяем, есть ли получатель в этом чате
+			for _, user := range users {
+				if user.ID == request.ReceiverID {
+					chat = &existingChat
+					break
+				}
+			}
+			if chat != nil {
+				break
+			}
+		}
+	}
+
+	// Если чат не найден, создаем новый
 	if chat == nil {
-		chat = &model.Chat{}
+		chat = &model.Chat{
+			// Личные чаты не имеют имени
+			// Групповые чаты будут обрабатываться отдельно
+		}
+
 		if err = h.chatService.CreateChat(chat); err != nil {
 			httputils.ResponseError(w, http.StatusInternalServerError, "failed to create chat")
 			return
 		}
 
+		// Добавляем обоих пользователей в чат
 		if err = h.chatService.AddUsersToChat(chat.ID, claims.UserID, request.ReceiverID); err != nil {
 			httputils.ResponseError(w, http.StatusInternalServerError, "failed to add users to chat")
 			return
 		}
+		isNewChat = true
 	}
 
+	// Создаем сообщение
 	msg := model.Message{
 		ChatID:   chat.ID,
 		SenderID: claims.UserID,
-		Message:  request.Message,
+		Message:  strings.TrimSpace(request.Message),
 	}
 
-	// persist to DB
+	// Сохраняем в базу данных
 	if err = h.chatService.SendMessageToChat(chat, msg); err != nil {
 		httputils.ResponseError(w, http.StatusInternalServerError, "failed to send message to chat")
+
+		// Если чат был новым и не удалось отправить сообщение, можно удалить чат
+		// if isNewChat {
+		// 	h.chatService.DeleteChat(chat.ID)
+		// }
 		return
 	}
 
-	// cache in redis (best-effort)
+	// Кэшируем в Redis
 	if h.chatCacheService != nil {
 		if err := h.chatCacheService.SendMessage(chat, msg); err != nil {
 			log.Printf("warning: failed to cache message in redis: %v", err)
 		}
 	}
 
+	// Отправляем через WebSocket
 	if h.hub != nil {
 		h.hub.BroadcastMessage(chat.ID, msg)
 	}
 
+	// Если это новый чат, отправляем системное уведомление о создании чата
+	if isNewChat && h.hub != nil {
+		systemMsg := model.Message{
+			ChatID:   chat.ID,
+			SenderID: 0, // Системное сообщение
+			Message:  fmt.Sprintf("Chat created between users %d and %d", claims.UserID, request.ReceiverID),
+		}
+		h.hub.BroadcastMessage(chat.ID, systemMsg)
+	}
+
 	httputils.ResponseJSON(w, http.StatusCreated, msg)
 }
+
+// @Summary Send message to user
+// @Description Send messages between two users only (for now)
+// @ID send-message
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param Bearer header string true "Auth Token"
+// @Param msgData body sendMessageRequest true "Message Data"
+// @Success 200
+// @Failure 400 {object} response.ErrorResponse
+// @Router /sendmessage [post]
+// func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
+// 	tokenStr := extractTokenFromHeader(r)
+// 	if tokenStr == "" {
+// 		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
+// 		return
+// 	}
+
+// 	claims, err := auth.ValidateToken(tokenStr)
+// 	if err != nil {
+// 		httputils.ResponseError(w, http.StatusUnauthorized, "invalid token")
+// 		return
+// 	}
+
+// 	var request sendMessageRequest
+// 	if err = json.NewDecoder(r.Body).Decode(&request); err != nil {
+// 		httputils.ResponseError(w, http.StatusBadRequest, "invalid request format")
+// 		return
+// 	}
+// 	defer r.Body.Close()
+
+// 	if request.ReceiverID == 0 || strings.TrimSpace(request.Message) == "" {
+// 		httputils.ResponseError(w, http.StatusBadRequest, "receiver_id and message are required")
+// 		return
+// 	}
+
+// 	chat, err := h.chatService.GetChatForUsers(claims.UserID, request.ReceiverID)
+// 	if err != nil {
+// 		httputils.ResponseError(w, http.StatusInternalServerError, "failed to get chat for users")
+// 		return
+// 	}
+
+// 	if chat == nil {
+// 		chat = &model.Chat{}
+// 		if err = h.chatService.CreateChat(chat); err != nil {
+// 			httputils.ResponseError(w, http.StatusInternalServerError, "failed to create chat")
+// 			return
+// 		}
+
+// 		if err = h.chatService.AddUsersToChat(chat.ID, claims.UserID, request.ReceiverID); err != nil {
+// 			httputils.ResponseError(w, http.StatusInternalServerError, "failed to add users to chat")
+// 			return
+// 		}
+// 	}
+
+// 	msg := model.Message{
+// 		ChatID:   chat.ID,
+// 		SenderID: claims.UserID,
+// 		Message:  request.Message,
+// 	}
+
+// 	// persist to DB
+// 	if err = h.chatService.SendMessageToChat(chat, msg); err != nil {
+// 		httputils.ResponseError(w, http.StatusInternalServerError, "failed to send message to chat")
+// 		return
+// 	}
+
+// 	// cache in redis (best-effort)
+// 	if h.chatCacheService != nil {
+// 		if err := h.chatCacheService.SendMessage(chat, msg); err != nil {
+// 			log.Printf("warning: failed to cache message in redis: %v", err)
+// 		}
+// 	}
+
+// 	if h.hub != nil {
+// 		h.hub.BroadcastMessage(chat.ID, msg)
+// 	}
+
+// 	httputils.ResponseJSON(w, http.StatusCreated, msg)
+// }
 
 type GetChatMessagesRequest struct {
 	Cursor    string `json:"cursor" form:"cursor" query:"cursor"`

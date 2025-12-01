@@ -27,6 +27,7 @@ type MessageService interface {
 type ChatService interface {
 	CreateChat(chat *model.Chat) error
 	GetChatForUsers(user1ID, user2ID uint) (*model.Chat, error)
+	GetChatUsers(chatID uint) ([]model.User, error)
 	AddUsersToChat(chatID uint, userIDs ...uint) error
 	SendMessageToChat(chat *model.Chat, message model.Message) error
 	// GetMessagesOfChat(chatID uint) ([]model.Message, error)

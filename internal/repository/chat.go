@@ -16,6 +16,8 @@ type ChatRepository interface {
 
 	GetChatsForUser(userID uint) (*[]model.Chat, error)
 
+	GetChatUsers(chatID uint) ([]model.User, error)
+
 	GetChatMessages(
 		chatID uint,
 		cursor string,
@@ -203,4 +205,17 @@ func (r *chatRepository) GetChatsForUser(userID uint) (*[]model.Chat, error) {
 	}
 
 	return &filteredChats, nil
+}
+
+func (r *chatRepository) GetChatUsers(chatID uint) ([]model.User, error) {
+
+	var chat model.Chat
+	err := r.db.Table("chats").Where("id = ?", chatID).First(&chat).Error
+	if err != nil {
+		return nil, err
+	}
+
+	users := chat.Users
+
+	return users, nil
 }

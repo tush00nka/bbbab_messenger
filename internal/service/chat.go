@@ -67,3 +67,7 @@ func (s *chatService) IsUserInChat(chatID, userID uint) (bool, error) {
 func (s *chatService) GetChatsForUser(userID uint) (*[]model.Chat, error) {
 	return s.chatRepo.GetChatsForUser(userID)
 }
+
+func (s *chatService) GetChatUsers(chatID uint) ([]model.User, error) {
+	return s.chatRepo.GetChatUsers(chatID)
+}

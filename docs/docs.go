@@ -628,7 +628,7 @@ const docTemplate = `{
         },
         "/sendmessage": {
             "post": {
-                "description": "Send messages between two users only (for now)",
+                "description": "Send message to existing chat or create new direct chat with user",
                 "consumes": [
                     "application/json"
                 ],
@@ -638,7 +638,7 @@ const docTemplate = `{
                 "tags": [
                     "chat"
                 ],
-                "summary": "Send message to user",
+                "summary": "Send message to user or group",
                 "operationId": "send-message",
                 "parameters": [
                     {
@@ -659,11 +659,32 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK"
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Message"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -923,11 +944,20 @@ const docTemplate = `{
         "handler.sendMessageRequest": {
             "type": "object",
             "properties": {
+                "chat_id": {
+                    "description": "Опционально: ID существующего чата",
+                    "type": "integer"
+                },
                 "message": {
                     "type": "string"
                 },
                 "receiver_id": {
+                    "description": "ID пользователя или чата",
                     "type": "integer"
+                },
+                "type": {
+                    "description": "Тип сообщения: \"text\", \"image\", \"file\" и т.д.",
+                    "type": "string"
                 }
             }
         },
