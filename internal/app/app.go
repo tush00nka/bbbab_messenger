@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"tush00nka/bbbab_messenger/internal/config"
 	"tush00nka/bbbab_messenger/internal/handler"
+	"tush00nka/bbbab_messenger/internal/model"
 	"tush00nka/bbbab_messenger/internal/pkg/sms"
 	"tush00nka/bbbab_messenger/internal/repository"
 	"tush00nka/bbbab_messenger/internal/service"
@@ -60,6 +61,8 @@ func Run(cfg *config.Config) {
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService, smsRepo, sms)
+
+	db.Set("gorm:table_options", "CREATE TABLE chat_users (chat_id bigint, user_id bigint, PRIMARY KEY(chat_id, user_id))").AutoMigrate(&model.ChatUser{})
 
 	// Chat
 	chatRepo := repository.NewChatRepository(db)
