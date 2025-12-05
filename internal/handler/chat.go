@@ -7,6 +7,7 @@ import (
 	"html"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -493,13 +494,7 @@ func (h *ChatHandler) createChat(w http.ResponseWriter, r *http.Request) {
 
 	// Добавляем текущего пользователя, если его нет в списке
 	userIDs := req.UserIDs
-	hasCurrentUser := false
-	for _, id := range userIDs {
-		if id == claims.UserID {
-			hasCurrentUser = true
-			break
-		}
-	}
+	hasCurrentUser := slices.Contains(userIDs, claims.UserID)
 	if !hasCurrentUser {
 		userIDs = append(userIDs, claims.UserID)
 	}

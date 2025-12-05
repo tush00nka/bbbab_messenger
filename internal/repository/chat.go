@@ -121,31 +121,58 @@ func (r *chatRepository) Delete(ctx context.Context, chatID uint) error {
 	return r.db.WithContext(ctx).Delete(&model.Chat{}, chatID).Error
 }
 
-// AddUser добавляет пользователя в чат
+// Метод AddUser
 func (r *chatRepository) AddUser(ctx context.Context, chatID, userID uint) error {
 	if chatID == 0 || userID == 0 {
 		return errors.New("chatID and userID cannot be zero")
 	}
 
-	// Проверяем, существует ли уже связь
-	var exists int64
-	err := r.db.WithContext(ctx).Table("chat_users").
-		Where("chat_id = ? AND user_id = ?", chatID, userID).
-		Count(&exists).Error
-	if err != nil {
+	// Используем модель ChatUser
+	chatUser := model.ChatUser{
+		ChatID: chatID,
+		UserID: userID,
+	}
+
+	return r.db.WithContext(ctx).Create(&chatUser).Error
+}
+
+// Метод CreateGroup
+func (r *chatRepository) CreateGroup(ctx context.Context, chat *model.Chat, userIDs []uint) error {
+	if chat == nil {
+		return errors.New("chat cannot be nil")
+	}
+
+	if len(userIDs) < 2 {
+		return errors.New("group must have at least 2 users")
+	}
+
+	// Начинаем транзакцию
+	tx := r.db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// Создаем чат
+	chat.IsGroup = true
+	if err := tx.Create(chat).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 
-	if exists > 0 {
-		// Пользователь уже в чате
-		return nil
+	// Добавляем пользователей через модель ChatUser
+	for _, userID := range userIDs {
+		chatUser := model.ChatUser{
+			ChatID: chat.ID,
+			UserID: userID,
+		}
+
+		if err := tx.Create(&chatUser).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failed to add user %d: %w", userID, err)
+		}
 	}
 
-	// Добавляем пользователя
-	return r.db.WithContext(ctx).Exec(`
-		INSERT INTO chat_users (chat_id, user_id, created_at, updated_at)
-		VALUES (?, ?, NOW(), NOW())
-	`, chatID, userID).Error
+	return tx.Commit().Error
 }
 
 // RemoveUser удаляет пользователя из чата
@@ -507,48 +534,6 @@ func (r *chatRepository) GetForUsers(ctx context.Context, user1ID, user2ID uint)
 	}
 
 	return &chat, nil
-}
-
-// CreateGroup создает групповой чат
-func (r *chatRepository) CreateGroup(ctx context.Context, chat *model.Chat, userIDs []uint) error {
-	if chat == nil {
-		return errors.New("chat cannot be nil")
-	}
-
-	if len(userIDs) < 2 {
-		return errors.New("group must have at least 2 users")
-	}
-
-	// Начинаем транзакцию
-	tx := r.db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// Создаем чат
-	chat.IsGroup = true
-	if err := tx.Create(chat).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// Добавляем пользователей
-	for _, userID := range userIDs {
-		if err := tx.Exec(`
-			INSERT INTO chat_users (chat_id, user_id, created_at, updated_at)
-			VALUES (?, ?, NOW(), NOW())
-		`, chat.ID, userID).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
-	return tx.Commit().Error
 }
 
 // UpdateGroupInfo обновляет информацию о групповом чате
