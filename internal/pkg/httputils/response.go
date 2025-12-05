@@ -4,20 +4,23 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"tush00nka/bbbab_messenger/api/response"
 )
+
+type ErrorResponse struct {
+	Message string `json:"message"`
+}
 
 func ResponseError(w http.ResponseWriter, errorCode int, errorMessage string) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
 
-	ResponseJSON(w, errorCode, response.ErrorResponse{
+	ResponseJSON(w, errorCode, ErrorResponse{
 		Message: errorMessage,
 	})
 }
 
-func ResponseJSON(w http.ResponseWriter, statusCode int, data interface{}) {
+func ResponseJSON(w http.ResponseWriter, statusCode int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")

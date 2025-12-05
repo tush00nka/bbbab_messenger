@@ -17,7 +17,61 @@ const docTemplate = `{
     "paths": {
         "/chat/create": {
             "post": {
-                "description": "Create a new group chat with users",
+                "description": "Create a new chat (personal or group)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Create chat",
+                "operationId": "create-chat",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "Bearer",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Chat data",
+                        "name": "chatData",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateChatRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Chat"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chat/group/create": {
+            "post": {
+                "description": "Create a new group chat",
                 "consumes": [
                     "application/json"
                 ],
@@ -38,12 +92,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Group Data",
+                        "description": "Group data",
                         "name": "groupData",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.createGroupRequest"
+                            "$ref": "#/definitions/handler.CreateGroupRequest"
                         }
                     }
                 ],
@@ -57,7 +111,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -79,6 +139,13 @@ const docTemplate = `{
                 "operationId": "user-joined",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "Bearer",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "type": "integer",
                         "description": "Chat ID",
                         "name": "chat_id",
@@ -97,22 +164,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.StatusResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -134,6 +204,13 @@ const docTemplate = `{
                 "operationId": "user-left",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "Bearer",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "type": "integer",
                         "description": "Chat ID",
                         "name": "chat_id",
@@ -152,30 +229,33 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.StatusResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
             }
         },
         "/chat/list": {
-            "post": {
-                "description": "List chats of user",
+            "get": {
+                "description": "Get list of chats for current user",
                 "consumes": [
                     "application/json"
                 ],
@@ -185,8 +265,8 @@ const docTemplate = `{
                 "tags": [
                     "chat"
                 ],
-                "summary": "List chats",
-                "operationId": "chat-list",
+                "summary": "List user chats",
+                "operationId": "list-chats",
                 "parameters": [
                     {
                         "type": "string",
@@ -194,15 +274,6 @@ const docTemplate = `{
                         "name": "Bearer",
                         "in": "header",
                         "required": true
-                    },
-                    {
-                        "description": "Group Data",
-                        "name": "groupData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.createGroupRequest"
-                        }
                     }
                 ],
                 "responses": {
@@ -215,24 +286,18 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
-                        }
-                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/chat/{id}/messages": {
+        "/chat/{id}": {
             "get": {
-                "description": "Получить сообщения чата с cursor-based пагинацией",
+                "description": "Get chat information by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -242,18 +307,84 @@ const docTemplate = `{
                 "tags": [
                     "chat"
                 ],
-                "summary": "Получить сообщения чата",
+                "summary": "Get chat info",
+                "operationId": "get-chat-info",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "Bearer",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
                         "type": "integer",
-                        "description": "ID чата",
+                        "description": "Chat ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Chat"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chat/{id}/messages": {
+            "get": {
+                "description": "Get messages from chat with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chat"
+                ],
+                "summary": "Get chat messages",
+                "operationId": "get-messages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Token",
+                        "name": "Bearer",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Chat ID",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Курсор для пагинации",
+                        "description": "Pagination cursor",
                         "name": "cursor",
                         "in": "query"
                     },
@@ -262,7 +393,7 @@ const docTemplate = `{
                         "minimum": 1,
                         "type": "integer",
                         "default": 20,
-                        "description": "Лимит сообщений",
+                        "description": "Limit",
                         "name": "limit",
                         "in": "query"
                     },
@@ -273,7 +404,7 @@ const docTemplate = `{
                         ],
                         "type": "string",
                         "default": "older",
-                        "description": "Направление пагинации",
+                        "description": "Direction",
                         "name": "direction",
                         "in": "query"
                     }
@@ -288,19 +419,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -337,25 +468,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -396,13 +527,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -446,13 +577,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -493,19 +624,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -569,19 +700,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -620,7 +751,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -628,7 +759,7 @@ const docTemplate = `{
         },
         "/sendmessage": {
             "post": {
-                "description": "Send message to existing chat or create new direct chat with user",
+                "description": "Send message to user or existing chat",
                 "consumes": [
                     "application/json"
                 ],
@@ -638,7 +769,7 @@ const docTemplate = `{
                 "tags": [
                     "chat"
                 ],
-                "summary": "Send message to user or group",
+                "summary": "Send message",
                 "operationId": "send-message",
                 "parameters": [
                     {
@@ -649,12 +780,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Message Data",
-                        "name": "msgData",
+                        "description": "Message data",
+                        "name": "messageData",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.sendMessageRequest"
+                            "$ref": "#/definitions/handler.SendMessageRequest"
                         }
                     }
                 ],
@@ -668,25 +799,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -722,13 +853,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -764,13 +895,13 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/httputils.ErrorResponse"
                         }
                     }
                 }
@@ -804,6 +935,46 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.CreateChatRequest": {
+            "type": "object",
+            "required": [
+                "user_ids"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "user_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "handler.CreateGroupRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "user_ids"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "user_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "handler.GetChatMessagesResponse": {
             "type": "object",
             "properties": {
@@ -823,9 +994,6 @@ const docTemplate = `{
             "properties": {
                 "createdAt": {
                     "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
                 },
                 "id": {
                     "type": "integer"
@@ -905,6 +1073,43 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.SendMessageRequest": {
+            "type": "object",
+            "required": [
+                "message",
+                "receiver_id"
+            ],
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string",
+                    "maxLength": 5000,
+                    "minLength": 1
+                },
+                "receiver_id": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string",
+                    "default": "text",
+                    "enum": [
+                        "text",
+                        "image",
+                        "file"
+                    ]
+                }
+            }
+        },
+        "handler.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.TokenResponse": {
             "type": "object",
             "properties": {
@@ -913,50 +1118,10 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.createChatRequest": {
+        "httputils.ErrorResponse": {
             "type": "object",
             "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "user_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "handler.createGroupRequest": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "user_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "handler.sendMessageRequest": {
-            "type": "object",
-            "properties": {
-                "chat_id": {
-                    "description": "Опционально: ID существующего чата",
-                    "type": "integer"
-                },
                 "message": {
-                    "type": "string"
-                },
-                "receiver_id": {
-                    "description": "ID пользователя или чата",
-                    "type": "integer"
-                },
-                "type": {
-                    "description": "Тип сообщения: \"text\", \"image\", \"file\" и т.д.",
                     "type": "string"
                 }
             }
@@ -972,6 +1137,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "isGroup": {
+                    "type": "boolean"
                 },
                 "messages": {
                     "type": "array",
@@ -997,7 +1165,11 @@ const docTemplate = `{
         "model.Message": {
             "type": "object",
             "properties": {
-                "chatID": {
+                "attachment_url": {
+                    "description": "Вложения и ссылки",
+                    "type": "string"
+                },
+                "chat_id": {
                     "type": "integer"
                 },
                 "createdAt": {
@@ -1009,11 +1181,38 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "is_edited": {
+                    "description": "Статистика",
+                    "type": "boolean"
+                },
                 "message": {
                     "type": "string"
                 },
-                "senderID": {
+                "reply_to": {
+                    "$ref": "#/definitions/model.Message"
+                },
+                "reply_to_id": {
                     "type": "integer"
+                },
+                "sender": {
+                    "description": "Связи",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    ]
+                },
+                "sender_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 },
                 "updatedAt": {
                     "type": "string"
@@ -1049,14 +1248,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "response.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
                     "type": "string"
                 }
             }

@@ -57,8 +57,8 @@ type SMSLoginRequest struct {
 // @Accept json
 // @Produce json
 // @Success 200 {object} map[string]string
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
 // @Param loginData body SMSLoginRequest true "Login data"
 // @Router /initlogin [post]
 func (h *UserHandler) initLogin(w http.ResponseWriter, r *http.Request) {
@@ -101,8 +101,8 @@ type ConfirmLoginRequest struct {
 // @Accept json
 // @Produce json
 // @Success 201 {object} TokenResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
 // @Param confirmLoginData body ConfirmLoginRequest true "Confirm Login data"
 // @Router /confirmlogin [post]
 func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
@@ -193,9 +193,9 @@ func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Success 201 {object} TokenResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 409 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 409 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
 // @Param registerData body RegisterRequest true "Register data"
 // @Router /register [post]
 func (c *UserHandler) registerUser(w http.ResponseWriter, r *http.Request) {
@@ -261,9 +261,9 @@ type RegisterRequest struct {
 // @Accept json
 // @Produce json
 // @Success 201 {object} TokenResponse
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 409 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 409 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
 // @Param loginData body LoginRequest true "Login data"
 // @Router /login [post]
 func (h *UserHandler) loginUser(w http.ResponseWriter, r *http.Request) {
@@ -322,8 +322,8 @@ type LoginRequest struct {
 // @Tags user
 // @Produce  json
 // @Success 200 {object} model.User
-// @Failure 404 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 404 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
 // @Param id path int true "User ID"
 // @Router /user/{id} [get]
 func (h *UserHandler) getUser(w http.ResponseWriter, r *http.Request) {
@@ -356,8 +356,8 @@ func (h *UserHandler) getUser(w http.ResponseWriter, r *http.Request) {
 // @Tags user
 // @Produce  json
 // @Success 200 {object} model.User
-// @Failure 401 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
+// @Failure 401 {object} httputils.ErrorResponse
+// @Failure 404 {object} httputils.ErrorResponse
 // @Param Bearer header string true "Auth Token"
 // @Router /user/me [get]
 func (h *UserHandler) getCurrentUser(w http.ResponseWriter, r *http.Request) {
@@ -388,7 +388,7 @@ func (h *UserHandler) getCurrentUser(w http.ResponseWriter, r *http.Request) {
 // @Tags user
 // @Produce  json
 // @Success 200 {object} []model.User
-// @Failure 404 {object} response.ErrorResponse
+// @Failure 404 {object} httputils.ErrorResponse
 // @Param prompt path string true "Search Prompt"
 // @Router /search/{prompt} [get]
 func (h *UserHandler) searchUser(w http.ResponseWriter, r *http.Request) {
@@ -414,8 +414,8 @@ func (h *UserHandler) searchUser(w http.ResponseWriter, r *http.Request) {
 // @Tags user
 // @Accept json
 // @Success 200
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 500 {object} response.ErrorResponse
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
 // @Param smsData body SMSRequest true "SMS Data"
 // @Router /sms [post]
 // func (h *UserHandler) sendSMS(w http.ResponseWriter, r *http.Request) {

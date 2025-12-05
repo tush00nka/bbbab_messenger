@@ -17,6 +17,34 @@ definitions:
       username:
         type: string
     type: object
+  handler.CreateChatRequest:
+    properties:
+      name:
+        maxLength: 100
+        type: string
+      user_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - user_ids
+    type: object
+  handler.CreateGroupRequest:
+    properties:
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      user_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - name
+    - user_ids
+    type: object
   handler.GetChatMessagesResponse:
     properties:
       data:
@@ -30,8 +58,6 @@ definitions:
     properties:
       createdAt:
         type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
       id:
         type: integer
       lastMessage:
@@ -82,41 +108,40 @@ definitions:
       phone:
         type: string
     type: object
+  handler.SendMessageRequest:
+    properties:
+      chat_id:
+        type: integer
+      message:
+        maxLength: 5000
+        minLength: 1
+        type: string
+      receiver_id:
+        type: integer
+      type:
+        default: text
+        enum:
+        - text
+        - image
+        - file
+        type: string
+    required:
+    - message
+    - receiver_id
+    type: object
+  handler.StatusResponse:
+    properties:
+      status:
+        type: string
+    type: object
   handler.TokenResponse:
     properties:
       token:
         type: string
     type: object
-  handler.createChatRequest:
+  httputils.ErrorResponse:
     properties:
-      name:
-        type: string
-      user_ids:
-        items:
-          type: integer
-        type: array
-    type: object
-  handler.createGroupRequest:
-    properties:
-      name:
-        type: string
-      user_ids:
-        items:
-          type: integer
-        type: array
-    type: object
-  handler.sendMessageRequest:
-    properties:
-      chat_id:
-        description: 'Опционально: ID существующего чата'
-        type: integer
       message:
-        type: string
-      receiver_id:
-        description: ID пользователя или чата
-        type: integer
-      type:
-        description: 'Тип сообщения: "text", "image", "file" и т.д.'
         type: string
     type: object
   model.Chat:
@@ -127,6 +152,8 @@ definitions:
         $ref: '#/definitions/gorm.DeletedAt'
       id:
         type: integer
+      isGroup:
+        type: boolean
       messages:
         items:
           $ref: '#/definitions/model.Message'
@@ -143,7 +170,10 @@ definitions:
     type: object
   model.Message:
     properties:
-      chatID:
+      attachment_url:
+        description: Вложения и ссылки
+        type: string
+      chat_id:
         type: integer
       createdAt:
         type: string
@@ -151,10 +181,27 @@ definitions:
         $ref: '#/definitions/gorm.DeletedAt'
       id:
         type: integer
+      is_edited:
+        description: Статистика
+        type: boolean
       message:
         type: string
-      senderID:
+      reply_to:
+        $ref: '#/definitions/model.Message'
+      reply_to_id:
         type: integer
+      sender:
+        allOf:
+        - $ref: '#/definitions/model.User'
+        description: Связи
+      sender_id:
+        type: integer
+      status:
+        type: string
+      timestamp:
+        type: string
+      type:
+        type: string
       updatedAt:
         type: string
     type: object
@@ -180,11 +227,6 @@ definitions:
       username:
         type: string
     type: object
-  response.ErrorResponse:
-    properties:
-      message:
-        type: string
-    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -192,30 +234,75 @@ info:
   title: BBBAB Messenger
   version: "0.1"
 paths:
-  /chat/{id}/messages:
+  /chat/{id}:
     get:
       consumes:
       - application/json
-      description: Получить сообщения чата с cursor-based пагинацией
+      description: Get chat information by ID
+      operationId: get-chat-info
       parameters:
-      - description: ID чата
+      - description: Auth Token
+        in: header
+        name: Bearer
+        required: true
+        type: string
+      - description: Chat ID
         in: path
         name: id
         required: true
         type: integer
-      - description: Курсор для пагинации
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Get chat info
+      tags:
+      - chat
+  /chat/{id}/messages:
+    get:
+      consumes:
+      - application/json
+      description: Get messages from chat with pagination
+      operationId: get-messages
+      parameters:
+      - description: Auth Token
+        in: header
+        name: Bearer
+        required: true
+        type: string
+      - description: Chat ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Pagination cursor
         in: query
         name: cursor
         type: string
       - default: 20
-        description: Лимит сообщений
+        description: Limit
         in: query
         maximum: 100
         minimum: 1
         name: limit
         type: integer
       - default: older
-        description: Направление пагинации
+        description: Direction
         enum:
         - older
         - newer
@@ -232,16 +319,16 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
-        "404":
-          description: Not Found
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "403":
+          description: Forbidden
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      summary: Получить сообщения чата
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Get chat messages
       tags:
       - chat
   /chat/{id}/ws:
@@ -265,19 +352,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: WebSocket chat connection
       tags:
       - chat
@@ -285,20 +372,20 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new group chat with users
-      operationId: create-group-chat
+      description: Create a new chat (personal or group)
+      operationId: create-chat
       parameters:
       - description: Auth Token
         in: header
         name: Bearer
         required: true
         type: string
-      - description: Group Data
+      - description: Chat data
         in: body
-        name: groupData
+        name: chatData
         required: true
         schema:
-          $ref: '#/definitions/handler.createGroupRequest'
+          $ref: '#/definitions/handler.CreateChatRequest'
       produces:
       - application/json
       responses:
@@ -309,7 +396,47 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Create chat
+      tags:
+      - chat
+  /chat/group/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new group chat
+      operationId: create-group-chat
+      parameters:
+      - description: Auth Token
+        in: header
+        name: Bearer
+        required: true
+        type: string
+      - description: Group data
+        in: body
+        name: groupData
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: Create group chat
       tags:
       - chat
@@ -320,6 +447,11 @@ paths:
       description: Notify that user joined chat (for presence tracking)
       operationId: user-joined
       parameters:
+      - description: Auth Token
+        in: header
+        name: Bearer
+        required: true
+        type: string
       - description: Chat ID
         in: path
         name: chat_id
@@ -336,17 +468,19 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/handler.StatusResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: User joined chat
       tags:
       - chat
@@ -357,6 +491,11 @@ paths:
       description: Notify that user left chat (for presence tracking)
       operationId: user-left
       parameters:
+      - description: Auth Token
+        in: header
+        name: Bearer
+        required: true
+        type: string
       - description: Chat ID
         in: path
         name: chat_id
@@ -373,38 +512,34 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/handler.StatusResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: User left chat
       tags:
       - chat
   /chat/list:
-    post:
+    get:
       consumes:
       - application/json
-      description: List chats of user
-      operationId: chat-list
+      description: Get list of chats for current user
+      operationId: list-chats
       parameters:
       - description: Auth Token
         in: header
         name: Bearer
         required: true
         type: string
-      - description: Group Data
-        in: body
-        name: groupData
-        required: true
-        schema:
-          $ref: '#/definitions/handler.createGroupRequest'
       produces:
       - application/json
       responses:
@@ -414,15 +549,11 @@ paths:
             items:
               $ref: '#/definitions/handler.ListChatsResponse'
             type: array
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      summary: List chats
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: List user chats
       tags:
       - chat
   /confirmlogin:
@@ -448,11 +579,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: Confirm Login
       tags:
       - user
@@ -481,11 +612,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: InitLogin
       tags:
       - user
@@ -512,15 +643,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: Login
       tags:
       - user
@@ -562,15 +693,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: Register
       tags:
       - user
@@ -596,7 +727,7 @@ paths:
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: Search users
       tags:
       - user
@@ -604,7 +735,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Send message to existing chat or create new direct chat with user
+      description: Send message to user or existing chat
       operationId: send-message
       parameters:
       - description: Auth Token
@@ -612,12 +743,12 @@ paths:
         name: Bearer
         required: true
         type: string
-      - description: Message Data
+      - description: Message data
         in: body
-        name: msgData
+        name: messageData
         required: true
         schema:
-          $ref: '#/definitions/handler.sendMessageRequest'
+          $ref: '#/definitions/handler.SendMessageRequest'
       produces:
       - application/json
       responses:
@@ -628,20 +759,20 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
-      summary: Send message to user or group
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Send message
       tags:
       - chat
   /user/{id}:
@@ -664,11 +795,11 @@ paths:
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: Get user
       tags:
       - user
@@ -692,11 +823,11 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/httputils.ErrorResponse'
       summary: Get current user
       tags:
       - user

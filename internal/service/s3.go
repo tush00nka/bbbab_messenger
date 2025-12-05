@@ -17,13 +17,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type s3Service struct {
+type S3Service struct {
 	config   *config.Config
 	uploader *manager.Uploader
 	s3Client *s3.Client
 }
 
-func NewS3Service(cfg *config.Config) (*s3Service, error) {
+func NewS3Service(cfg *config.Config) (*S3Service, error) {
 	// Используем BaseEndpoint для кастомного endpoint
 	s3Opts := []func(*s3.Options){}
 
@@ -57,7 +57,7 @@ func NewS3Service(cfg *config.Config) (*s3Service, error) {
 	// Создаем S3 клиент
 	s3Client := s3.NewFromConfig(awsCfg, s3Opts...)
 
-	service := &s3Service{
+	service := &S3Service{
 		config:   cfg,
 		uploader: manager.NewUploader(s3Client),
 		s3Client: s3Client,
@@ -67,7 +67,7 @@ func NewS3Service(cfg *config.Config) (*s3Service, error) {
 	return service, nil
 }
 
-func (s *s3Service) UploadFile(ctx context.Context, file io.Reader, filename, contentType, userID, chatID string) (*model.FileMetadata, error) {
+func (s *S3Service) UploadFile(ctx context.Context, file io.Reader, filename, contentType, userID, chatID string) (*model.FileMetadata, error) {
 	fileID := uuid.New().String()
 	s3Key := path.Join("chats", chatID, fileID, filename)
 
@@ -97,7 +97,7 @@ func (s *s3Service) UploadFile(ctx context.Context, file io.Reader, filename, co
 	}, nil
 }
 
-func (s *s3Service) GeneratePresignedURL(ctx context.Context, fileMetadata *model.FileMetadata, expires time.Duration) (string, error) {
+func (s *S3Service) GeneratePresignedURL(ctx context.Context, fileMetadata *model.FileMetadata, expires time.Duration) (string, error) {
 	presignClient := s3.NewPresignClient(s.s3Client)
 
 	request, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
@@ -112,7 +112,7 @@ func (s *s3Service) GeneratePresignedURL(ctx context.Context, fileMetadata *mode
 	return request.URL, nil
 }
 
-func (s *s3Service) HealthCheck(ctx context.Context) error {
+func (s *S3Service) HealthCheck(ctx context.Context) error {
 	// Простая проверка - пытаемся листовать bucket'ы
 	_, err := s.s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {

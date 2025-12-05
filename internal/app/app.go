@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"tush00nka/bbbab_messenger/internal/config"
 	"tush00nka/bbbab_messenger/internal/handler"
 	"tush00nka/bbbab_messenger/internal/pkg/sms"
@@ -10,10 +11,29 @@ import (
 	"tush00nka/bbbab_messenger/internal/service"
 	"tush00nka/bbbab_messenger/internal/ws"
 
+	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
 )
 
 type App struct {
+}
+
+type simpleLogger struct{}
+
+func (l *simpleLogger) Info(msg string, fields ...any) {
+	log.Printf("[INFO] "+msg, fields...)
+}
+
+func (l *simpleLogger) Warn(msg string, fields ...any) {
+	log.Printf("[WARN] "+msg, fields...)
+}
+
+func (l *simpleLogger) Error(msg string, fields ...any) {
+	log.Printf("[ERROR] "+msg, fields...)
+}
+
+func (l *simpleLogger) Debug(msg string, fields ...any) {
+	log.Printf("[DEBUG] "+msg, fields...)
 }
 
 func Run(cfg *config.Config) {
@@ -53,7 +73,21 @@ func Run(cfg *config.Config) {
 	// WS Hub
 	hub := ws.NewHub()
 
-	chatHandler := handler.NewChatHandler(chatService, chatCacheService, s3Service, hub)
+	// WebSocket Upgrader с настройками
+	wsUpgrader := &websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			// В development разрешаем все origins
+			// В production нужно настроить правильные домены
+			return true
+		},
+	}
+
+	// Создаем логгер
+	logger := &simpleLogger{}
+
+	chatHandler := handler.NewChatHandler(chatService, chatCacheService, s3Service, hub, wsUpgrader, logger)
 	server := NewServer(userHandler, chatHandler)
 	server.Run(cfg.ServerPort)
 }
