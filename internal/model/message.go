@@ -24,7 +24,7 @@ type Message struct {
 	IsEdited bool `gorm:"default:false" json:"is_edited"`
 
 	// Связи
-	Sender  User     `gorm:"foreignKey:SenderID" json:"sender,omitempty"`
+	Sender  User     `gorm:"foreignKey:SenderID" json:"sender"`
 	ReplyTo *Message `gorm:"foreignKey:ReplyToID" json:"reply_to,omitempty"`
 }
 

@@ -665,8 +665,13 @@ func (h *ChatHandler) CreateGroup(w http.ResponseWriter, r *http.Request) {
 
 // WSChat устанавливает WebSocket соединение
 func (h *ChatHandler) wsChat(w http.ResponseWriter, r *http.Request) {
-	// Аутентификация
-	tokenStr := extractTokenFromHeader(r)
+	// Получаем токен из query параметра или заголовка
+	tokenStr := r.URL.Query().Get("token")
+	if tokenStr == "" {
+		// Если нет в query, пробуем из заголовка Authorization
+		tokenStr = extractTokenFromHeader(r)
+	}
+
 	if tokenStr == "" {
 		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
 		return
@@ -702,10 +707,21 @@ func (h *ChatHandler) wsChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Настройка WebSocket Upgrader с поддержкой query параметров
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			// Разрешаем все origins для WebSocket (можно ограничить в production)
+			return true
+		},
+	}
+
 	// Upgrade WebSocket соединения
-	conn, err := ws.Upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.logger.Warn("websocket upgrade failed", "error", err)
+		httputils.ResponseError(w, http.StatusBadRequest, "failed to upgrade to websocket")
 		return
 	}
 
@@ -769,14 +785,12 @@ func (h *ChatHandler) wsChat(w http.ResponseWriter, r *http.Request) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// Просто запускаем ReadPump, ошибки обрабатываются внутри
 		client.ReadPump(h.handleIncomingMessage)
 	}()
 
 	// Ждем завершения обеих горутин
 	go func() {
 		wg.Wait()
-		// Закрываем канал ошибок после завершения всех горутин
 		close(errChan)
 	}()
 
@@ -895,6 +909,8 @@ func (h *ChatHandler) handleChatMessage(c *ws.Client, ev ws.InEvent) {
 		SenderID:  c.UserID,
 		Message:   txt,
 		Timestamp: time.Now(),
+		Type:      "text",
+		Status:    "sent",
 	}
 
 	// Асинхронная обработка

@@ -37,14 +37,14 @@ const (
 
 // OutEvent исходящее событие
 type OutEvent struct {
-	Type      string      `json:"type"`
-	Message   interface{} `json:"message,omitempty"`
-	Messages  interface{} `json:"messages,omitempty"`
-	UserID    uint        `json:"user_id,omitempty"`
-	ChatID    uint        `json:"chat_id,omitempty"`
-	Timestamp time.Time   `json:"timestamp,omitempty"`
-	MessageID uint        `json:"message_id,omitempty"`
-	Meta      interface{} `json:"meta,omitempty"`
+	Type      string    `json:"type"`
+	Message   any       `json:"message,omitempty"`
+	Messages  any       `json:"messages,omitempty"`
+	UserID    uint      `json:"user_id,omitempty"`
+	ChatID    uint      `json:"chat_id,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+	MessageID uint      `json:"message_id,omitempty"`
+	Meta      any       `json:"meta,omitempty"`
 }
 
 // InEvent входящее событие
@@ -199,7 +199,7 @@ func (h *Hub) GetUserRooms(userID uint) []uint {
 }
 
 // BroadcastMessage отправляет сообщение во все комнаты пользователя
-func (h *Hub) BroadcastMessage(chatID uint, payload interface{}) {
+func (h *Hub) BroadcastMessage(chatID uint, payload any) {
 	room := h.GetRoom(chatID)
 	ev := OutEvent{
 		Type:      EventTypeMessage,
@@ -696,7 +696,7 @@ func (c *Client) WritePump() error {
 }
 
 // SendJSON отправляет JSON сообщение
-func (c *Client) SendJSON(v interface{}) bool {
+func (c *Client) SendJSON(v any) bool {
 	data, err := json.Marshal(v)
 	if err != nil {
 		log.Printf("client marshal error: %v", err)
