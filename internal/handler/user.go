@@ -50,13 +50,18 @@ type SMSLoginRequest struct {
 	Phone string `json:"phone"`
 }
 
+type InitLoginResponse struct {
+	Message    string `json:"message"`
+	UserExists bool   `json:"user_exists"`
+}
+
 // @Summary InitLogin
 // @Description Init SMS login procedure
 // @ID initlogin
 // @Tags user
 // @Accept json
 // @Produce json
-// @Success 200 {object} map[string]string
+// @Success 200 {object} InitLoginResponse
 // @Failure 400 {object} httputils.ErrorResponse
 // @Failure 500 {object} httputils.ErrorResponse
 // @Param loginData body SMSLoginRequest true "Login data"
@@ -83,8 +88,14 @@ func (h *UserHandler) initLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputils.ResponseJSON(w, http.StatusOK, map[string]string{
-		"message": "verification code sent",
+	userExists, err := h.userService.PhoneExists(request.Phone)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "failed to check user existance")
+	}
+
+	httputils.ResponseJSON(w, http.StatusOK, InitLoginResponse{
+		Message:    "verification code sent",
+		UserExists: userExists,
 	})
 }
 
