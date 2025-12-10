@@ -381,8 +381,7 @@ func (r *chatRepository) GetChatMessages(
 	query := r.db.WithContext(ctx).
 		Model(&model.Message{}).
 		Where("chat_id = ?", chatID).
-		Preload("Sender").
-		Preload("ReadBy")
+		Preload("Sender")
 
 	// Обрабатываем курсор
 	var cursorTime time.Time
