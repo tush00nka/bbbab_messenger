@@ -437,61 +437,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/chat/{id}/ws": {
-            "get": {
-                "description": "Establish WebSocket connection for real-time chat",
-                "tags": [
-                    "chat"
-                ],
-                "summary": "WebSocket chat connection",
-                "operationId": "ws-chat",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Chat ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "101": {
-                        "description": "Switching Protocols"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputils.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputils.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/httputils.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputils.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/confirmlogin": {
             "post": {
                 "description": "Validate phone code and either create a new user or log into existing",
@@ -568,10 +513,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.InitLoginResponse"
                         }
                     },
                     "400": {
@@ -986,6 +928,17 @@ const docTemplate = `{
                 },
                 "pagination": {
                     "$ref": "#/definitions/handler.PaginationInfo"
+                }
+            }
+        },
+        "handler.InitLoginResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "user_exists": {
+                    "type": "boolean"
                 }
             }
         },
