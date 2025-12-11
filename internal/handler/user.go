@@ -32,7 +32,7 @@ func (c *UserHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/login", c.loginUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/register", c.registerUser).Methods("POST", "OPTIONS")
 	router.HandleFunc("/user/{id}", c.getUser).Methods("GET", "OPTIONS")
-	router.HandleFunc("/user/me", c.getCurrentUser).Methods("GET", "OPTIONS")
+	router.HandleFunc("/me", c.getCurrentUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET", "OPTIONS")
 
 	// router.HandleFunc("/sms", c.sendSMS).Methods("POST", "OPTIONS")
@@ -370,7 +370,7 @@ func (h *UserHandler) getUser(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} httputils.ErrorResponse
 // @Failure 404 {object} httputils.ErrorResponse
 // @Param Bearer header string true "Auth Token"
-// @Router /user/me [get]
+// @Router /me [get]
 func (h *UserHandler) getCurrentUser(w http.ResponseWriter, r *http.Request) {
 	tokenStr := extractTokenFromHeader(r)
 	if tokenStr == "" {
