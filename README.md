@@ -11,7 +11,7 @@ The project uses Docker volumes to cache Go compilation artifacts between contai
 - `go-build-cache`: Stores compiled packages and build cache
 - `go-mod-cache`: Stores downloaded Go modules
 
-These volumes are automatically created and managed by Docker Compose. To clear the cache if needed:
+These volumes are automatically created and managed by Docker Compose. To clear the cache if needed run this:
 ```bash
 docker volume rm bbbab_messenger_go-build-cache bbbab_messenger_go-mod-cache
 ```
