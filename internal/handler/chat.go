@@ -136,6 +136,7 @@ func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 
 	router.HandleFunc("/sendmessage", authMiddleware(h.sendMessage)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/{id:[0-9]+}", authMiddleware(h.getChatInfo)).Methods("GET", "OPTIONS")
+	router.HandleFunc("/chat/message/{id:[0-9]+}", authMiddleware(h.deleteMessage)).Methods("DELETE", "OPTIONS") //new one
 	router.HandleFunc("/chat/create", authMiddleware(h.createChat)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/list", authMiddleware(h.listChats)).Methods("GET", "OPTIONS")
 	router.HandleFunc("/chat/{id:[0-9]+}/ws", h.wsChat).Methods("GET", "OPTIONS")
@@ -143,6 +144,110 @@ func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/chat/join/{chat_id:[0-9]+}/{user_id:[0-9]+}", authMiddleware(h.UserJoined)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/leave/{chat_id:[0-9]+}/{user_id:[0-9]+}", authMiddleware(h.UserLeft)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/group/create", authMiddleware(h.CreateGroup)).Methods("POST", "OPTIONS")
+}
+
+// DeleteMessage удаляет сообщение
+// @Summary Delete message
+// @Description Delete a specific message by ID
+// @ID delete-message
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param Bearer header string true "Auth Token"
+// @Param id path int true "Message ID"
+// @Success 200 {object} StatusResponse
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 401 {object} httputils.ErrorResponse
+// @Failure 403 {object} httputils.ErrorResponse
+// @Failure 404 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
+// @Router /chat/message/{id} [delete]
+func (h *ChatHandler) deleteMessage(w http.ResponseWriter, r *http.Request) {
+	claims, err := getClaimsFromContext(r)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	vars := mux.Vars(r)
+	msgID64, err := strconv.ParseUint(vars["id"], 10, 64)
+	if err != nil || msgID64 == 0 {
+		httputils.ResponseError(w, http.StatusBadRequest, "invalid message id")
+		return
+	}
+	msgID := uint(msgID64)
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	msg, err := h.chatService.GetMessageByID(ctx, msgID)
+	if err != nil {
+		h.logger.Error("failed to get message", "error", err)
+		httputils.ResponseError(w, http.StatusInternalServerError, "failed to get message")
+		return
+	}
+	if msg == nil {
+		httputils.ResponseError(w, http.StatusNotFound, "message not found")
+		return
+	}
+
+	// Логика прав:
+	// 1) сообщение может удалять только его отправитель
+	if msg.SenderID != claims.UserID {
+		httputils.ResponseError(w, http.StatusForbidden, "cannot delete messages of other users")
+		return
+	}
+
+	// 2) и только участник чата
+	isMember, err := h.chatService.IsUserInChat(ctx, msg.ChatID, claims.UserID)
+	if err != nil {
+		h.logger.Error("failed to check membership", "error", err)
+		httputils.ResponseError(w, http.StatusInternalServerError, "failed to validate membership")
+		return
+	}
+	if !isMember {
+		httputils.ResponseError(w, http.StatusForbidden, "user is not a member of this chat")
+		return
+	}
+
+	// Удаляем из БД
+	if err := h.chatService.DeleteMessage(ctx, msgID); err != nil {
+		h.logger.Error("failed to delete message", "error", err)
+		httputils.ResponseError(w, http.StatusInternalServerError, "failed to delete message")
+		return
+	}
+
+	// Асинхронно чистим Redis
+	if h.chatCacheService != nil {
+		go func(chatID, messageID uint) {
+			ctxCache, cancelCache := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancelCache()
+
+			if err := h.chatCacheService.DeleteMessage(ctxCache, chatID, messageID); err != nil {
+				h.logger.Warn("failed to delete message from cache", "error", err)
+			}
+		}(msg.ChatID, msg.ID)
+	}
+
+	// Уведомляем всех WS-клиентов чата
+	if h.hub != nil {
+		ev := ws.OutEvent{
+			Type:      ws.EventTypeMessageDeleted,
+			ChatID:    msg.ChatID,
+			MessageID: msg.ID,
+			Timestamp: time.Now(),
+		}
+
+		if room, ok := h.hub.GetRoomSafe(msg.ChatID); ok {
+			if data, err := json.Marshal(ev); err == nil {
+				room.Broadcast(data)
+			} else {
+				h.logger.Warn("failed to marshal message_deleted event", "error", err)
+			}
+		}
+	}
+
+	httputils.ResponseJSON(w, http.StatusOK, StatusResponse{Status: "message deleted"})
 }
 
 // authMiddleware middleware для аутентификации
@@ -219,7 +324,6 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// Валидация
 	if req.ReceiverID == 0 {
 		httputils.ResponseError(w, http.StatusBadRequest, "receiver_id is required")
 		return
@@ -237,22 +341,19 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 
 	var chat *model.Chat
 
-	// Если указан chat_id, используем существующий чат
 	if req.ChatID > 0 {
 		chat, err = h.chatService.GetChatByID(ctx, req.ChatID)
-		if err != nil {
+		if err != nil || chat == nil {
 			httputils.ResponseError(w, http.StatusNotFound, "chat not found")
 			return
 		}
 
-		// Проверяем, что пользователь является участником чата
 		isMember, err := h.chatService.IsUserInChat(ctx, chat.ID, claims.UserID)
 		if err != nil || !isMember {
 			httputils.ResponseError(w, http.StatusForbidden, "user is not a member of this chat")
 			return
 		}
 	} else {
-		// Ищем или создаем личный чат
 		chat, err = h.findOrCreateDirectChat(ctx, claims.UserID, req.ReceiverID)
 		if err != nil {
 			h.logger.Error("failed to find or create chat", "error", err)
@@ -261,7 +362,6 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Создаем сообщение с Timestamp
 	msg := model.Message{
 		ChatID:    chat.ID,
 		SenderID:  claims.UserID,
@@ -270,14 +370,13 @@ func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		Timestamp: time.Now(),
 	}
 
-	// Сохраняем сообщение
-	if err := h.processMessage(ctx, chat, msg); err != nil {
+	if err := h.processMessage(ctx, chat, &msg); err != nil {
 		h.logger.Error("failed to process message", "error", err)
 		httputils.ResponseError(w, http.StatusInternalServerError, "failed to send message")
 		return
 	}
 
-	// Возвращаем сообщение с ID и Timestamp
+	// Теперь msg содержит правильный ID / CreatedAt / Timestamp
 	httputils.ResponseJSON(w, http.StatusCreated, msg)
 }
 
@@ -320,27 +419,27 @@ func (h *ChatHandler) findOrCreateDirectChat(ctx context.Context, userID1, userI
 }
 
 // processMessage обрабатывает отправку сообщения
-func (h *ChatHandler) processMessage(ctx context.Context, chat *model.Chat, msg model.Message) error {
-	// Сохраняем в БД
+func (h *ChatHandler) processMessage(ctx context.Context, chat *model.Chat, msg *model.Message) error {
+	// Сохраняем в БД (здесь GORM проставит ID, CreatedAt)
 	if err := h.chatService.SendMessageToChat(ctx, chat, msg); err != nil {
 		return err
 	}
 
-	// Кешируем в Redis (асинхронно)
+	// Кешируем в Redis (асинхронно, но кладём уже объект с корректным ID)
 	if h.chatCacheService != nil {
-		go func() {
+		go func(m model.Message) {
 			ctxCache, cancel := context.WithTimeout(context.Background(), PresenceTimeout)
 			defer cancel()
 
-			if err := h.chatCacheService.SendMessage(ctxCache, chat, msg); err != nil {
+			if err := h.chatCacheService.SendMessage(ctxCache, chat, m); err != nil {
 				h.logger.Warn("failed to cache message", "error", err)
 			}
-		}()
+		}(*msg)
 	}
 
 	// Отправляем через WebSocket
 	if h.hub != nil {
-		h.hub.BroadcastMessage(chat.ID, msg)
+		h.hub.BroadcastMessage(chat.ID, *msg)
 	}
 
 	return nil
@@ -875,14 +974,12 @@ func (h *ChatHandler) handleIncomingMessage(c *ws.Client, ev ws.InEvent) {
 
 // handleChatMessage обрабатывает текстовые сообщения
 func (h *ChatHandler) handleChatMessage(c *ws.Client, ev ws.InEvent) {
-	// Валидация
 	txt := strings.TrimSpace(ev.Message)
 
 	if len(txt) == 0 {
 		c.SendJSON(ws.OutEvent{Type: "error", Message: "message cannot be empty"})
 		return
 	}
-
 	if len(txt) > MaxMessageLength {
 		c.SendJSON(ws.OutEvent{
 			Type:    "error",
@@ -891,7 +988,6 @@ func (h *ChatHandler) handleChatMessage(c *ws.Client, ev ws.InEvent) {
 		return
 	}
 
-	// Проверка rate limit
 	if !c.CheckRateLimit() {
 		c.SendJSON(ws.OutEvent{
 			Type:    "error",
@@ -900,29 +996,23 @@ func (h *ChatHandler) handleChatMessage(c *ws.Client, ev ws.InEvent) {
 		return
 	}
 
-	// Экранирование HTML
 	txt = html.EscapeString(txt)
 
-	// Создание сообщения с Timestamp
 	msg := model.Message{
 		ChatID:    c.ChatID,
 		SenderID:  c.UserID,
 		Message:   txt,
 		Timestamp: time.Now(),
-		Type:      "text",
-		Status:    "sent",
 	}
 
-	// Асинхронная обработка
-	go h.processWebSocketMessage(c, msg)
+	go h.processWebSocketMessage(c, &msg)
 }
 
 // processWebSocketMessage обрабатывает сообщение из WebSocket
-func (h *ChatHandler) processWebSocketMessage(c *ws.Client, msg model.Message) {
+func (h *ChatHandler) processWebSocketMessage(c *ws.Client, msg *model.Message) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Сохраняем в БД
 	chat := &model.Chat{}
 	chat.ID = msg.ChatID
 
@@ -940,27 +1030,24 @@ func (h *ChatHandler) processWebSocketMessage(c *ws.Client, msg model.Message) {
 		return
 	}
 
-	// Кешируем
 	if h.chatCacheService != nil {
-		go func() {
+		go func(m model.Message) {
 			ctxCache, cancelCache := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancelCache()
 
 			chat := &model.Chat{}
-			chat.ID = msg.ChatID
+			chat.ID = m.ChatID
 
-			if err := h.chatCacheService.SendMessage(ctxCache, chat, msg); err != nil {
+			if err := h.chatCacheService.SendMessage(ctxCache, chat, m); err != nil {
 				h.logger.Warn("failed to cache message", "error", err)
 			}
-		}()
+		}(*msg)
 	}
 
-	// Рассылаем
 	if h.hub != nil {
-		h.hub.BroadcastMessage(msg.ChatID, msg)
+		h.hub.BroadcastMessage(msg.ChatID, *msg)
 	}
 
-	// Подтверждение с ID и Timestamp
 	select {
 	case <-ctx.Done():
 	default:

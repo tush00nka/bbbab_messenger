@@ -38,7 +38,7 @@ type ChatService interface {
 	IsUserInChat(ctx context.Context, chatID, userID uint) (bool, error)
 
 	// Операции с сообщениями
-	SendMessageToChat(ctx context.Context, chat *model.Chat, message model.Message) error
+	SendMessageToChat(ctx context.Context, chat *model.Chat, message *model.Message) error
 	GetChatMessages(ctx context.Context, chatID uint, cursor string, limit int, direction string) (
 		[]model.Message, bool, bool, *int64, error)
 	GetRecentMessages(ctx context.Context, chatID uint, limit int) ([]model.Message, error)

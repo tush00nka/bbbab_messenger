@@ -23,16 +23,17 @@ const (
 
 // Типы событий
 const (
-	EventTypeMessage     = "message"
-	EventTypeTyping      = "typing"
-	EventTypeReadReceipt = "read_receipt"
-	EventTypeHistory     = "history"
-	EventTypeError       = "error"
-	EventTypeUserJoined  = "user_joined"
-	EventTypeUserLeft    = "user_left"
-	EventTypeMessageSent = "message_sent"
-	EventTypePresence    = "presence"
-	EventTypeRoomInfo    = "room_info"
+	EventTypeMessage        = "message"
+	EventTypeTyping         = "typing"
+	EventTypeReadReceipt    = "read_receipt"
+	EventTypeHistory        = "history"
+	EventTypeError          = "error"
+	EventTypeUserJoined     = "user_joined"
+	EventTypeUserLeft       = "user_left"
+	EventTypeMessageSent    = "message_sent"
+	EventTypePresence       = "presence"
+	EventTypeRoomInfo       = "room_info"
+	EventTypeMessageDeleted = "message_deleted"
 )
 
 // OutEvent исходящее событие

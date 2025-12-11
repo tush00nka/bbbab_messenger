@@ -6,8 +6,6 @@ import (
 	"time"
 	"tush00nka/bbbab_messenger/internal/model"
 	"tush00nka/bbbab_messenger/internal/repository"
-
-	"gorm.io/gorm"
 )
 
 // ChatCacheService сервис для кеширования чатов
@@ -109,34 +107,17 @@ func (s *ChatCacheService) UserLeft(ctx context.Context, chatID, userID uint) er
 	return nil
 }
 
-// flushMessagesToDB сохраняет сообщения из кеша в БД и очищает кеш
+// service/chat_cache.go
+
+// flushMessagesToDB больше НЕ пишет в БД, только чистит кеш.
+// Все сообщения уже сохранены в Postgres в момент отправки.
 func (s *ChatCacheService) flushMessagesToDB(ctx context.Context, chatID uint) error {
-	// Получаем сообщения из кеша
-	messages, err := s.cacheRepo.GetMessages(ctx, chatID)
-	if err != nil {
-		return err
+	if chatID == 0 {
+		return nil
 	}
 
-	// Если сообщений нет, просто очищаем кеш
-	if len(messages) == 0 {
-		return s.cacheRepo.ClearMessages(ctx, chatID)
-	}
-
-	// Сохраняем каждое сообщение в БД
-	for _, msg := range messages {
-		// Создаем минимальный объект чата для передачи в репозиторий
-		chat := &model.Chat{Model: gorm.Model{ID: chatID}}
-
-		// Сохраняем в БД
-		if err := s.chatRepo.SendMessage(ctx, chat, msg); err != nil {
-			log.Printf("failed to persist message from cache: %v", err)
-			// Продолжаем сохранение остальных сообщений
-		}
-	}
-
-	// Очищаем кеш после сохранения
 	if err := s.cacheRepo.ClearMessages(ctx, chatID); err != nil {
-		log.Printf("failed to clear cache: %v", err)
+		log.Printf("failed to clear message cache: %v", err)
 		return err
 	}
 
@@ -196,6 +177,19 @@ func (s *ChatCacheService) GetChatStats(ctx context.Context, chatID uint) (map[s
 	}
 
 	return stats, nil
+}
+
+func (s *ChatCacheService) DeleteMessage(ctx context.Context, chatID, messageID uint) error {
+	if chatID == 0 || messageID == 0 {
+		return nil
+	}
+
+	if err := s.cacheRepo.DeleteMessage(ctx, chatID, messageID); err != nil {
+		log.Printf("failed to delete message from cache: %v", err)
+		return err
+	}
+
+	return nil
 }
 
 // Legacy методы для обратной совместимости

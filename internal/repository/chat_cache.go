@@ -18,6 +18,7 @@ type ChatCacheRepository interface {
 	ClearMessages(ctx context.Context, chatID uint) error
 	GetMessageCount(ctx context.Context, chatID uint) (int64, error)
 	TrimMessages(ctx context.Context, chatID uint, maxSize int64) error
+	DeleteMessage(ctx context.Context, chatID, messageID uint) error
 
 	// Операции с пользователями (присутствие)
 	AddUserToChat(ctx context.Context, chatID, userID uint) error
@@ -433,6 +434,38 @@ func (r *chatCacheRepository) GetChatStatistics(ctx context.Context, chatID uint
 	return stats, nil
 }
 
+func (r *chatCacheRepository) DeleteMessage(ctx context.Context, chatID, messageID uint) error {
+	if chatID == 0 || messageID == 0 {
+		return fmt.Errorf("chatID and messageID cannot be zero")
+	}
+
+	key := r.getMessageKey(chatID)
+
+	values, err := r.rdb.LRange(ctx, key, 0, -1).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil
+		}
+		return fmt.Errorf("failed to get messages from redis: %w", err)
+	}
+
+	for _, v := range values {
+		var msg model.Message
+		if err := json.Unmarshal([]byte(v), &msg); err != nil {
+			continue
+		}
+
+		if msg.ID == messageID {
+			if err := r.rdb.LRem(ctx, key, 0, v).Err(); err != nil {
+				return fmt.Errorf("failed to remove message from redis: %w", err)
+			}
+			// Если вдруг есть дубли — уберём все
+		}
+	}
+
+	return nil
+}
+
 // Legacy методы для обратной совместимости
 func (r *chatCacheRepository) SaveMessageLegacy(chatID uint, msg model.Message) error {
 	return r.SaveMessage(context.Background(), chatID, msg)
@@ -452,4 +485,8 @@ func (r *chatCacheRepository) AddUserToChatLegacy(chatID, userID uint) error {
 
 func (r *chatCacheRepository) RemoveUserFromChatLegacy(chatID, userID uint) (int64, error) {
 	return r.RemoveUserFromChat(context.Background(), chatID, userID)
+}
+
+func (r *chatCacheRepository) DeleteMessageLegacy(chatID, messageID uint) error {
+	return r.DeleteMessage(context.Background(), chatID, messageID)
 }

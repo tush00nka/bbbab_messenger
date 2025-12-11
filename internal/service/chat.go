@@ -137,9 +137,13 @@ func (s *chatService) IsUserInChat(ctx context.Context, chatID, userID uint) (bo
 }
 
 // SendMessageToChat отправляет сообщение в чат
-func (s *chatService) SendMessageToChat(ctx context.Context, chat *model.Chat, message model.Message) error {
+func (s *chatService) SendMessageToChat(ctx context.Context, chat *model.Chat, message *model.Message) error {
 	if chat == nil || chat.ID == 0 {
 		return errors.New("invalid chat")
+	}
+
+	if message == nil {
+		return errors.New("message cannot be nil")
 	}
 
 	if message.SenderID == 0 {
@@ -150,12 +154,18 @@ func (s *chatService) SendMessageToChat(ctx context.Context, chat *model.Chat, m
 		return errors.New("message cannot be empty")
 	}
 
-	// Устанавливаем метаданные
 	now := time.Now()
+
+	// GORM всё равно проставит CreatedAt/UpdatedAt, но мы можем синхронизировать Timestamp
 	if message.CreatedAt.IsZero() {
 		message.CreatedAt = now
 	}
 	message.UpdatedAt = now
+
+	if message.Timestamp.IsZero() {
+		// Делаем Timestamp согласованным с CreatedAt, чтобы пагинация по времени была стабильной
+		message.Timestamp = message.CreatedAt
+	}
 
 	return s.chatRepo.SendMessage(ctx, chat, message)
 }
@@ -373,7 +383,7 @@ func (s *chatService) AddUsersToChatLegacy(chatID uint, userIDs ...uint) error {
 }
 
 func (s *chatService) SendMessageToChatLegacy(chat *model.Chat, message model.Message) error {
-	return s.SendMessageToChat(context.Background(), chat, message)
+	return s.SendMessageToChat(context.Background(), chat, &message)
 }
 
 func (s *chatService) GetChatMessagesLegacy(chatID uint, cursor string, limit int, direction string, ctx context.Context) (

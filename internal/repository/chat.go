@@ -27,7 +27,7 @@ type ChatRepository interface {
 	GetChatUsersCount(ctx context.Context, chatID uint) (int64, error)
 
 	// Операции с сообщениями
-	SendMessage(ctx context.Context, chat *model.Chat, message model.Message) error
+	SendMessage(ctx context.Context, chat *model.Chat, message *model.Message) error
 	GetMessages(ctx context.Context, chatID uint) ([]model.Message, error)
 	GetRecentMessages(ctx context.Context, chatID uint, limit int) ([]model.Message, error)
 	GetMessageByID(ctx context.Context, messageID uint) (*model.Message, error)
@@ -234,19 +234,21 @@ func (r *chatRepository) IsUserInChat(ctx context.Context, chatID, userID uint) 
 }
 
 // SendMessage отправляет сообщение в чат
-func (r *chatRepository) SendMessage(ctx context.Context, chat *model.Chat, message model.Message) error {
+func (r *chatRepository) SendMessage(ctx context.Context, chat *model.Chat, message *model.Message) error {
 	if chat == nil || chat.ID == 0 {
 		return errors.New("invalid chat")
 	}
-
+	if message == nil {
+		return errors.New("message cannot be nil")
+	}
 	if message.SenderID == 0 {
 		return errors.New("senderID cannot be zero")
 	}
 
-	// Устанавливаем chat_id
+	// Гарантируем, что chat_id выставлен
 	message.ChatID = chat.ID
 
-	return r.db.WithContext(ctx).Create(&message).Error
+	return r.db.WithContext(ctx).Create(message).Error
 }
 
 // GetMessages возвращает все сообщения чата
@@ -700,7 +702,7 @@ func (r *chatRepository) AddUserLegacy(chatID, userID uint) error {
 }
 
 func (r *chatRepository) SendMessageLegacy(chat *model.Chat, message model.Message) error {
-	return r.SendMessage(context.Background(), chat, message)
+	return r.SendMessage(context.Background(), chat, &message)
 }
 
 func (r *chatRepository) GetMessagesLegacy(chatID uint) ([]model.Message, error) {
