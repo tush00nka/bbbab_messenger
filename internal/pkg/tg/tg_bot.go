@@ -61,7 +61,7 @@ func (t *TelegramAdapter) UpdateUserDatabase() {
 		contact := update.Message.Contact
 
 		if contact != nil {
-			phone := contact.PhoneNumber[2:] // todo: магическое число обрубает "+7"
+			phone := contact.PhoneNumber
 			log.Printf("Shared phone number via Telegram: %s\n", phone)
 			t.chatIDs[phone] = id
 			t.SendMessage(id, "Спасибо)")
