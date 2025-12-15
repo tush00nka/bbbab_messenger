@@ -1,6 +1,7 @@
 package tg
 
 import (
+	"fmt"
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -62,6 +63,9 @@ func (t *TelegramAdapter) UpdateUserDatabase() {
 
 		if contact != nil {
 			phone := contact.PhoneNumber
+			if phone[0] != '+' {
+				phone = fmt.Sprint('+', phone)
+			}
 			log.Printf("Shared phone number via Telegram: %s\n", phone)
 			t.chatIDs[phone] = id
 			t.SendMessage(id, "Спасибо)")
