@@ -8,6 +8,7 @@ import (
 	"tush00nka/bbbab_messenger/internal/handler"
 	"tush00nka/bbbab_messenger/internal/model"
 	"tush00nka/bbbab_messenger/internal/pkg/sms"
+	"tush00nka/bbbab_messenger/internal/pkg/tg"
 	"tush00nka/bbbab_messenger/internal/repository"
 	"tush00nka/bbbab_messenger/internal/service"
 	"tush00nka/bbbab_messenger/internal/ws"
@@ -57,10 +58,19 @@ func Run(cfg *config.Config) {
 	cacheRepo := repository.NewChatCacheRepository(rdb)
 	smsRepo := repository.NewSMSRepository(rdb)
 
+	// Создаем Telegram-бота
+	tgBot, err := tg.NewTelegramAdapter(cfg.TGBotAPI)
+	if err != nil {
+		log.Fatal("Failed to create S3 service", err)
+	}
+
+	// Запускаем канал обновлений типа))
+	go tgBot.UpdateUserDatabase()
+
 	// User
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
-	userHandler := handler.NewUserHandler(userService, smsRepo, sms)
+	userHandler := handler.NewUserHandler(userService, smsRepo, sms, tgBot)
 
 	db.Set("gorm:table_options", "CREATE TABLE chat_users (chat_id bigint, user_id bigint, PRIMARY KEY(chat_id, user_id))").AutoMigrate(&model.ChatUser{})
 

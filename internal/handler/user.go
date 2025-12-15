@@ -10,6 +10,7 @@ import (
 	"tush00nka/bbbab_messenger/internal/pkg/auth"
 	"tush00nka/bbbab_messenger/internal/pkg/httputils"
 	"tush00nka/bbbab_messenger/internal/pkg/sms"
+	"tush00nka/bbbab_messenger/internal/pkg/tg"
 	"tush00nka/bbbab_messenger/internal/repository"
 	"tush00nka/bbbab_messenger/internal/service"
 
@@ -20,10 +21,11 @@ type UserHandler struct {
 	userService service.UserService
 	smsRepo     repository.SMSRepository
 	sms         sms.SMSProvider
+	tgBot       tg.TelegramSender
 }
 
-func NewUserHandler(userService service.UserService, smsRepo repository.SMSRepository, sms sms.SMSProvider) *UserHandler {
-	return &UserHandler{userService: userService, smsRepo: smsRepo, sms: sms}
+func NewUserHandler(userService service.UserService, smsRepo repository.SMSRepository, sms sms.SMSProvider, tgBot tg.TelegramSender) *UserHandler {
+	return &UserHandler{userService: userService, smsRepo: smsRepo, sms: sms, tgBot: tgBot}
 }
 
 func (c *UserHandler) RegisterRoutes(router *mux.Router) {
@@ -83,9 +85,19 @@ func (h *UserHandler) initLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := fmt.Sprintf("[Amber] Ваш код авторизации: %s", code)
-	if err := h.sms.SendSMS(request.Phone, message); err != nil {
-		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to send SMS")
-		return
+	tgID := h.tgBot.GetID(request.Phone)
+
+	if tgID != 0 {
+		if err = h.tgBot.SendMessage(tgID, message); err != nil {
+			httputils.ResponseError(w, http.StatusInternalServerError, "Failed to send SMS")
+			return
+		}
+	} else {
+		if err := h.sms.SendSMS(request.Phone, message); err != nil {
+			httputils.ResponseError(w, http.StatusInternalServerError, "Failed to send SMS")
+			return
+		}
+
 	}
 
 	userExists, err := h.userService.PhoneExists(request.Phone)
