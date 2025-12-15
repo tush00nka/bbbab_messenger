@@ -64,7 +64,7 @@ func (t *TelegramAdapter) UpdateUserDatabase() {
 		if contact != nil {
 			phone := contact.PhoneNumber
 			if phone[0] != '+' {
-				phone = fmt.Sprint('+', phone)
+				phone = fmt.Sprintf("+%s", phone)
 			}
 			log.Printf("Shared phone number via Telegram: %s\n", phone)
 			t.chatIDs[phone] = id
