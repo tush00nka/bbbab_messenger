@@ -26,6 +26,8 @@ type Config struct {
 	S3BucketName      string `mapstructure:"S3_BUCKET_NAME"`
 	S3Endpoint        string `mapstructure:"S3_ENDPOINT"`
 	S3UseSSL          bool   `mapstructure:"S3_USE_SSL"`
+
+	TGBotAPI string `mapstructure:"TG_BOT_API"`
 }
 
 func Load() (*Config, error) {
@@ -77,6 +79,10 @@ func Load() (*Config, error) {
 	if cfg.RedisPassword == "" {
 		return nil, fmt.Errorf("REDIS_PASSWORD is required")
 	}
+
+	// if cfg.TGBotAPI == "" {
+	// 	return nil, fmt.Errorf("TG_BOT_API is required")
+	// }
 
 	return &cfg, nil
 }
