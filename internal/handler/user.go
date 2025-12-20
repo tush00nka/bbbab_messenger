@@ -15,6 +15,7 @@ import (
 	"tush00nka/bbbab_messenger/internal/service"
 
 	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 )
 
 type UserHandler struct {
@@ -207,13 +208,21 @@ func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type UpdateUserRequest struct {
+	Phone              string `json:"phone"`
+	Username           string `json:"username"`
+	DisplayName        string `json:"display_name"`
+	Password           string `json:"password"`
+	ProfilePictureLink string `json:"profile_picture_link"`
+}
+
 // @Summary Update user
 // @Description Update user information
 // @ID update-user
 // @Tags user
 // @Produce json
 // @Param Bearer header string true "Auth Token"
-// @Param userData body model.User true "User Data"
+// @Param userData body UpdateUserRequest true "User Data"
 // @Success 200
 // @Failure 401 {object} httputils.ErrorResponse
 // @Failure 404 {object} httputils.ErrorResponse
@@ -226,15 +235,21 @@ func (h *UserHandler) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user model.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+	var req UpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputils.ResponseError(w, http.StatusBadRequest, "invalid request format")
 		return
 	}
 	defer r.Body.Close()
 
-	// make sure we update the user that's currently logged in
-	user.ID = claims.UserID
+	user := model.User{
+		Model:              gorm.Model{ID: claims.UserID},
+		Phone:              req.Phone,
+		Username:           req.Username,
+		DisplayName:        req.DisplayName,
+		Password:           req.Password,
+		ProfilePictureLink: req.ProfilePictureLink,
+	}
 
 	if err := h.userService.UpdateUser(&user); err != nil {
 		httputils.ResponseError(w, http.StatusInternalServerError, fmt.Sprintf("failed to update user with id: %d", user.ID))

@@ -81,11 +81,21 @@ func (s *userService) UpdateUser(user *model.User) error {
 	}
 
 	// Обновляем только разрешенные поля
-	existingUser.Password = user.Password
-	existingUser.Phone = user.Phone
-	existingUser.DisplayName = user.DisplayName
-	existingUser.ProfilePictureLink = user.ProfilePictureLink
-	existingUser.Username = user.Username
+	if user.Password != "" {
+		existingUser.Password = user.Password
+	}
+	if user.Phone != "" {
+		existingUser.Phone = user.Phone
+	}
+	if user.DisplayName != "" {
+		existingUser.DisplayName = user.DisplayName
+	}
+	if user.ProfilePictureLink != "" {
+		existingUser.ProfilePictureLink = user.ProfilePictureLink
+	}
+	if user.Username != "" {
+		existingUser.Username = user.Username
+	}
 
 	return s.userRepo.Update(existingUser)
 }
