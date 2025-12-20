@@ -33,16 +33,15 @@ func (s *Server) setupRoutes() {
 	// Сначала создаем основной роутер
 	s.router = mux.NewRouter()
 
-	// Swagger ДО CORS middleware (чтобы swagger.json был доступен)
 	swaggerHandler := httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
+		httpSwagger.UIConfig(map[string]string{
+			"defaultModelsExpandDepth": "0",
+		}),
 	)
 	s.router.PathPrefix("/swagger/").Handler(swaggerHandler)
 
-	// doc.json endpoint
 	s.router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Content-Type", "application/json")
 		http.ServeFile(w, r, "./docs/swagger.json")
 	})
 
@@ -80,7 +79,9 @@ func (s *Server) setupRoutes() {
 	)
 
 	// Обернуть весь роутер в CORS
-	s.router.Use(corsMiddleware)
+	s.router.Use(func(next http.Handler) http.Handler {
+		return corsMiddleware(next)
+	})
 }
 
 func (s *Server) Run(port string) {
