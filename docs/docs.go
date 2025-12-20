@@ -826,7 +826,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Auth Token",
-                        "name": "Bearer",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     },

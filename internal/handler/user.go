@@ -221,7 +221,7 @@ type UpdateUserRequest struct {
 // @ID update-user
 // @Tags user
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Auth Token"
 // @Param userData body UpdateUserRequest true "User Data"
 // @Success 200
 // @Failure 401 {object} httputils.ErrorResponse

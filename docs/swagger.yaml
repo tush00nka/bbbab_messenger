@@ -783,7 +783,7 @@ paths:
       parameters:
       - description: Auth Token
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       - description: User Data
