@@ -74,13 +74,6 @@ definitions:
       updatedAt:
         type: string
     type: object
-  handler.LoginRequest:
-    properties:
-      password:
-        type: string
-      username:
-        type: string
-    type: object
   handler.PaginationInfo:
     properties:
       hasNext:
@@ -99,15 +92,6 @@ definitions:
   handler.PongResponse:
     properties:
       message:
-        type: string
-    type: object
-  handler.RegisterRequest:
-    properties:
-      confirmPassword:
-        type: string
-      password:
-        type: string
-      username:
         type: string
     type: object
   handler.SMSLoginRequest:
@@ -222,12 +206,16 @@ definitions:
         type: string
       deletedAt:
         $ref: '#/definitions/gorm.DeletedAt'
+      display_name:
+        type: string
       id:
         type: integer
       password:
         type: string
       phone:
-        description: такого формата мб 8-900-800-55-55
+        description: "+79995552233"
+        type: string
+      profile_picture_link:
         type: string
       updatedAt:
         type: string
@@ -526,6 +514,53 @@ paths:
       summary: List user chats
       tags:
       - chat
+  /chat/message/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific message by ID
+      operationId: delete-message
+      parameters:
+      - description: Auth Token
+        in: header
+        name: Bearer
+        required: true
+        type: string
+      - description: Message ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Delete message
+      tags:
+      - chat
   /confirmlogin:
     post:
       consumes:
@@ -588,39 +623,32 @@ paths:
       summary: InitLogin
       tags:
       - user
-  /login:
-    post:
-      consumes:
-      - application/json
-      description: Loing into account
-      operationId: login
+  /me:
+    get:
+      description: Get current user by token
+      operationId: get-current-user
       parameters:
-      - description: Login data
-        in: body
-        name: loginData
+      - description: Auth Token
+        in: header
+        name: Bearer
         required: true
-        schema:
-          $ref: '#/definitions/handler.LoginRequest'
+        type: string
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "200":
+          description: OK
           schema:
-            $ref: '#/definitions/handler.TokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httputils.ErrorResponse'
-        "409":
-          description: Conflict
+            $ref: '#/definitions/model.User'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/httputils.ErrorResponse'
-        "500":
-          description: Internal Server Error
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/httputils.ErrorResponse'
-      summary: Login
+      summary: Get current user
       tags:
       - user
   /ping:
@@ -638,41 +666,6 @@ paths:
       summary: Пингануть свервер
       tags:
       - system
-  /register:
-    post:
-      consumes:
-      - application/json
-      description: Register an account
-      operationId: register
-      parameters:
-      - description: Register data
-        in: body
-        name: registerData
-        required: true
-        schema:
-          $ref: '#/definitions/handler.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/handler.TokenResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httputils.ErrorResponse'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/httputils.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/httputils.ErrorResponse'
-      summary: Register
-      tags:
-      - user
   /search/{prompt}:
     get:
       description: Search users by username
@@ -771,23 +764,26 @@ paths:
       summary: Get user
       tags:
       - user
-  /user/me:
-    get:
-      description: Get current user by token
-      operationId: get-current-user
+    put:
+      description: Update user information
+      operationId: update-user
       parameters:
       - description: Auth Token
         in: header
         name: Bearer
         required: true
         type: string
+      - description: User Data
+        in: body
+        name: userData
+        required: true
+        schema:
+          $ref: '#/definitions/model.User'
       produces:
       - application/json
       responses:
         "200":
           description: OK
-          schema:
-            $ref: '#/definitions/model.User'
         "401":
           description: Unauthorized
           schema:
@@ -796,7 +792,11 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/httputils.ErrorResponse'
-      summary: Get current user
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Update user
       tags:
       - user
 swagger: "2.0"
