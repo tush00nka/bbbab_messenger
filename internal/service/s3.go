@@ -18,7 +18,7 @@ import (
 )
 
 type S3Service struct {
-	config   *config.Config
+	Config   *config.Config
 	uploader *manager.Uploader
 	s3Client *s3.Client
 }
@@ -58,7 +58,7 @@ func NewS3Service(cfg *config.Config) (*S3Service, error) {
 	s3Client := s3.NewFromConfig(awsCfg, s3Opts...)
 
 	service := &S3Service{
-		config:   cfg,
+		Config:   cfg,
 		uploader: manager.NewUploader(s3Client),
 		s3Client: s3Client,
 	}
@@ -67,35 +67,35 @@ func NewS3Service(cfg *config.Config) (*S3Service, error) {
 	return service, nil
 }
 
-func (s *S3Service) UploadFile(ctx context.Context, file io.Reader, filename, contentType, userID, chatID string) (*model.FileMetadata, error) {
-	fileID := uuid.New().String()
-	s3Key := path.Join("chats", chatID, fileID, filename)
+// func (s *S3Service) UploadFile(ctx context.Context, file io.Reader, filename, contentType, userID, chatID string) (*model.FileMetadata, error) {
+// 	fileID := uuid.New().String()
+// 	s3Key := path.Join("chats", chatID, fileID, filename)
 
-	log.Printf("📤 Uploading file: %s to %s/%s", filename, s.config.S3BucketName, s3Key)
+// 	log.Printf("📤 Uploading file: %s to %s/%s", filename, s.config.S3BucketName, s3Key)
 
-	result, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(s.config.S3BucketName),
-		Key:         aws.String(s3Key),
-		Body:        file,
-		ContentType: aws.String(contentType),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to upload file: %w", err)
-	}
+// 	result, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
+// 		Bucket:      aws.String(s.config.S3BucketName),
+// 		Key:         aws.String(s3Key),
+// 		Body:        file,
+// 		ContentType: aws.String(contentType),
+// 	})
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to upload file: %w", err)
+// 	}
 
-	log.Printf("✅ File uploaded successfully: %s", result.Location)
+// 	log.Printf("✅ File uploaded successfully: %s", result.Location)
 
-	return &model.FileMetadata{
-		ID:          fileID,
-		Filename:    filename,
-		ContentType: contentType,
-		S3Key:       s3Key,
-		S3Bucket:    s.config.S3BucketName,
-		UploadedBy:  userID,
-		ChatID:      chatID,
-		CreatedAt:   time.Now(),
-	}, nil
-}
+// 	return &model.FileMetadata{
+// 		ID:          fileID,
+// 		Filename:    filename,
+// 		ContentType: contentType,
+// 		S3Key:       s3Key,
+// 		S3Bucket:    s.config.S3BucketName,
+// 		UploadedBy:  userID,
+// 		ChatID:      chatID,
+// 		CreatedAt:   time.Now(),
+// 	}, nil
+// }
 
 func (s *S3Service) GeneratePresignedURL(ctx context.Context, fileMetadata *model.FileMetadata, expires time.Duration) (string, error) {
 	presignClient := s3.NewPresignClient(s.s3Client)
@@ -118,5 +118,52 @@ func (s *S3Service) HealthCheck(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("storage health check failed: %w", err)
 	}
+	return nil
+}
+
+func (s *S3Service) UploadProfilePicture(ctx context.Context, file io.Reader, filename, contentType string, userID uint) (*model.FileMetadata, error) {
+	fileID := uuid.New().String()
+
+	ext := path.Ext(filename)
+	s3Key := path.Join("avatar", fmt.Sprint(userID), fileID+ext)
+
+	result, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(s.Config.S3BucketName),
+		Key:         aws.String(s3Key),
+		Body:        file,
+		ContentType: aws.String(contentType),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to uplaod profile picture: %w", err)
+	}
+
+	log.Printf("[S3] Profile picture uploaded successfully: %s", result.Location)
+
+	return &model.FileMetadata{
+		ID:               fileID,
+		Filename:         filename,
+		ContentType:      contentType,
+		S3Key:            s3Key,
+		S3Bucket:         s.Config.S3BucketName,
+		UploadedByUserID: userID,
+		ChatID:           0, // Для аватарки не нужен chatID
+		CreatedAt:        time.Now(),
+	}, nil
+}
+
+func (s *S3Service) DeleteProfilePicture(ctx context.Context, s3Key string) error {
+	if s3Key == "" {
+		return nil // Нет аватарки для удаления
+	}
+
+	_, err := s.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.Config.S3BucketName),
+		Key:    aws.String(s3Key),
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to delete profile picture: %w", err)
+	}
+
 	return nil
 }

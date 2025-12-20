@@ -32,8 +32,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     },
@@ -86,8 +87,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     },
@@ -140,8 +142,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     },
@@ -205,8 +208,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     },
@@ -270,8 +274,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     }
@@ -312,8 +317,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     },
@@ -382,8 +388,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     },
@@ -440,8 +447,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     },
@@ -615,8 +623,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     }
@@ -722,8 +731,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
-                        "name": "Bearer",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
                         "in": "header",
                         "required": true
                     },
@@ -825,7 +835,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Auth Token",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
                         "name": "Authorization",
                         "in": "header",
                         "required": true
@@ -846,6 +857,124 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{id}/avatar": {
+            "get": {
+                "description": "Get profile picture of a user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get user pfp",
+                "operationId": "get-profile-picture",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.PresignedURL"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Upload profile picture for user",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Upload user pfp",
+                "operationId": "upload-profile-picture",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "Bearer",
+                        "description": "Bearer токен",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Файл для загрузки",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.PresignedURL"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httputils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/httputils.ErrorResponse"
                         }
@@ -1009,6 +1138,14 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.PresignedURL": {
+            "type": "object",
+            "properties": {
+                "profilePictureURL": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.SMSLoginRequest": {
             "type": "object",
             "properties": {
@@ -1074,7 +1211,7 @@ const docTemplate = `{
                 "phone": {
                     "type": "string"
                 },
-                "profile_picture_link": {
+                "profile_picture_key": {
                     "type": "string"
                 },
                 "username": {
@@ -1211,7 +1348,7 @@ const docTemplate = `{
                     "description": "+79995552233",
                     "type": "string"
                 },
-                "profile_picture_link": {
+                "profile_picture_key": {
                     "type": "string"
                 },
                 "updatedAt": {

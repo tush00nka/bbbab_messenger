@@ -153,7 +153,7 @@ func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 // @Tags chat
 // @Accept json
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Param id path int true "Message ID"
 // @Success 200 {object} StatusResponse
 // @Failure 400 {object} httputils.ErrorResponse
@@ -302,7 +302,7 @@ func getClaimsFromContext(r *http.Request) (*auth.Claims, error) {
 // @Tags chat
 // @Accept json
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Param messageData body SendMessageRequest true "Message data"
 // @Success 201 {object} model.Message
 // @Failure 400 {object} httputils.ErrorResponse
@@ -452,7 +452,7 @@ func (h *ChatHandler) processMessage(ctx context.Context, chat *model.Chat, msg 
 // @Tags chat
 // @Accept json
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Param id path int true "Chat ID"
 // @Param cursor query string false "Pagination cursor"
 // @Param limit query int false "Limit" minimum(1) maximum(100) default(20)
@@ -554,7 +554,7 @@ func (h *ChatHandler) getMessages(w http.ResponseWriter, r *http.Request) {
 // @Tags chat
 // @Accept json
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Param chatData body CreateChatRequest true "Chat data"
 // @Success 201 {object} model.Chat
 // @Failure 400 {object} httputils.ErrorResponse
@@ -617,7 +617,7 @@ func (h *ChatHandler) createChat(w http.ResponseWriter, r *http.Request) {
 // @Tags chat
 // @Accept json
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Param chat_id path int true "Chat ID"
 // @Param user_id path int true "User ID"
 // @Success 200 {object} StatusResponse
@@ -665,7 +665,7 @@ func (h *ChatHandler) UserJoined(w http.ResponseWriter, r *http.Request) {
 // @Tags chat
 // @Accept json
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Param chat_id path int true "Chat ID"
 // @Param user_id path int true "User ID"
 // @Success 200 {object} StatusResponse
@@ -713,7 +713,7 @@ func (h *ChatHandler) UserLeft(w http.ResponseWriter, r *http.Request) {
 // @Tags chat
 // @Accept json
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Param groupData body CreateGroupRequest true "Group data"
 // @Success 201 {object} model.Chat
 // @Failure 400 {object} httputils.ErrorResponse
@@ -1090,7 +1090,7 @@ func (h *ChatHandler) handleReadReceipt(c *ws.Client, ev ws.InEvent) {
 // @Tags chat
 // @Accept json
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Param id path int true "Chat ID"
 // @Success 200 {object} model.Chat
 // @Failure 400 {object} httputils.ErrorResponse
@@ -1138,7 +1138,7 @@ func (h *ChatHandler) getChatInfo(w http.ResponseWriter, r *http.Request) {
 // @Tags chat
 // @Accept json
 // @Produce json
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Success 200 {object} []ListChatsResponse
 // @Failure 500 {object} httputils.ErrorResponse
 // @Router /chat/list [get]

@@ -90,8 +90,8 @@ func (s *userService) UpdateUser(user *model.User) error {
 	if user.DisplayName != "" {
 		existingUser.DisplayName = user.DisplayName
 	}
-	if user.ProfilePictureLink != "" {
-		existingUser.ProfilePictureLink = user.ProfilePictureLink
+	if user.ProfilePictureKey != "" {
+		existingUser.ProfilePictureKey = user.ProfilePictureKey
 	}
 	if user.Username != "" {
 		existingUser.Username = user.Username

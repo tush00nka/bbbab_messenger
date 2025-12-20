@@ -94,6 +94,11 @@ definitions:
       message:
         type: string
     type: object
+  handler.PresignedURL:
+    properties:
+      profilePictureURL:
+        type: string
+    type: object
   handler.SMSLoginRequest:
     properties:
       phone:
@@ -138,7 +143,7 @@ definitions:
         type: string
       phone:
         type: string
-      profile_picture_link:
+      profile_picture_key:
         type: string
       username:
         type: string
@@ -228,7 +233,7 @@ definitions:
       phone:
         description: "+79995552233"
         type: string
-      profile_picture_link:
+      profile_picture_key:
         type: string
       updatedAt:
         type: string
@@ -249,9 +254,10 @@ paths:
       description: Get chat information by ID
       operationId: get-chat-info
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       - description: Chat ID
@@ -288,9 +294,10 @@ paths:
       description: Get messages from chat with pagination
       operationId: get-messages
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       - description: Chat ID
@@ -346,9 +353,10 @@ paths:
       description: Create a new chat (personal or group)
       operationId: create-chat
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       - description: Chat data
@@ -382,9 +390,10 @@ paths:
       description: Create a new group chat
       operationId: create-group-chat
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       - description: Group data
@@ -418,9 +427,10 @@ paths:
       description: Notify that user joined chat (for presence tracking)
       operationId: user-joined
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       - description: Chat ID
@@ -462,9 +472,10 @@ paths:
       description: Notify that user left chat (for presence tracking)
       operationId: user-left
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       - description: Chat ID
@@ -506,9 +517,10 @@ paths:
       description: Get list of chats for current user
       operationId: list-chats
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       produces:
@@ -534,9 +546,10 @@ paths:
       description: Delete a specific message by ID
       operationId: delete-message
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       - description: Message ID
@@ -641,9 +654,10 @@ paths:
       description: Get current user by token
       operationId: get-current-user
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       produces:
@@ -712,9 +726,10 @@ paths:
       description: Send message to user or existing chat
       operationId: send-message
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
-        name: Bearer
+        name: Authorization
         required: true
         type: string
       - description: Message data
@@ -781,7 +796,8 @@ paths:
       description: Update user information
       operationId: update-user
       parameters:
-      - description: Auth Token
+      - default: Bearer
+        description: Bearer токен
         in: header
         name: Authorization
         required: true
@@ -810,6 +826,86 @@ paths:
           schema:
             $ref: '#/definitions/httputils.ErrorResponse'
       summary: Update user
+      tags:
+      - user
+  /user/{id}/avatar:
+    get:
+      description: Get profile picture of a user
+      operationId: get-profile-picture
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.PresignedURL'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Get user pfp
+      tags:
+      - user
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload profile picture for user
+      operationId: upload-profile-picture
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: Bearer
+        description: Bearer токен
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Файл для загрузки
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.PresignedURL'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Upload user pfp
       tags:
       - user
 swagger: "2.0"

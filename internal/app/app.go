@@ -47,6 +47,11 @@ func Run(cfg *config.Config) {
 		log.Fatal(err)
 	}
 
+	s3, err := service.NewS3Service(cfg)
+	if err != nil {
+		log.Fatal("Failed to create S3 service", err)
+	}
+
 	// storage := storage.NewRedisStorage(fmt.Sprintf("storage:%s", cfg.RedisPort), cfg.RedisPassword, 0) // TODO: get rid of magic number
 	sms := sms.NewMockSMSProvider("SOMETOKEN")
 
@@ -61,7 +66,7 @@ func Run(cfg *config.Config) {
 	// Создаем Telegram-бота
 	tgBot, err := tg.NewTelegramAdapter(cfg.TGBotAPI)
 	if err != nil {
-		log.Fatal("Failed to create S3 service", err)
+		log.Fatal("Failed to init telegram bot", err)
 	}
 
 	// Запускаем канал обновлений типа))
@@ -70,7 +75,7 @@ func Run(cfg *config.Config) {
 	// User
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
-	userHandler := handler.NewUserHandler(userService, smsRepo, sms, tgBot)
+	userHandler := handler.NewUserHandler(userService, s3, smsRepo, sms, tgBot)
 
 	db.Set("gorm:table_options", "CREATE TABLE chat_users (chat_id bigint, user_id bigint, PRIMARY KEY(chat_id, user_id))").AutoMigrate(&model.ChatUser{})
 

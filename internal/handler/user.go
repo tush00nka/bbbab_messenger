@@ -3,7 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 	"tush00nka/bbbab_messenger/internal/model"
@@ -20,13 +22,14 @@ import (
 
 type UserHandler struct {
 	userService service.UserService
+	s3Service   *service.S3Service
 	smsRepo     repository.SMSRepository
 	sms         sms.SMSProvider
 	tgBot       tg.TelegramSender
 }
 
-func NewUserHandler(userService service.UserService, smsRepo repository.SMSRepository, sms sms.SMSProvider, tgBot tg.TelegramSender) *UserHandler {
-	return &UserHandler{userService: userService, smsRepo: smsRepo, sms: sms, tgBot: tgBot}
+func NewUserHandler(userService service.UserService, s3Service *service.S3Service, smsRepo repository.SMSRepository, sms sms.SMSProvider, tgBot tg.TelegramSender) *UserHandler {
+	return &UserHandler{userService: userService, s3Service: s3Service, smsRepo: smsRepo, sms: sms, tgBot: tgBot}
 }
 
 func (c *UserHandler) RegisterRoutes(router *mux.Router) {
@@ -34,6 +37,8 @@ func (c *UserHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/confirmlogin", c.confirmLogin).Methods("POST", "OPTIONS")
 	router.HandleFunc("/user/{id}", c.updateUser).Methods("PUT", "OPTIONS")
 	router.HandleFunc("/user/{id}", c.getUser).Methods("GET", "OPTIONS")
+	router.HandleFunc("/user/{id}/avatar", c.UploadProfilePicture).Methods("POST", "OPTIONS")
+	router.HandleFunc("/user/{id}/avatar", c.GetProfilePicture).Methods("GET", "OPTIONS")
 	router.HandleFunc("/me", c.getCurrentUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET", "OPTIONS")
 
@@ -209,11 +214,11 @@ func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateUserRequest struct {
-	Phone              string `json:"phone"`
-	Username           string `json:"username"`
-	DisplayName        string `json:"display_name"`
-	Password           string `json:"password"`
-	ProfilePictureLink string `json:"profile_picture_link"`
+	Phone             string `json:"phone"`
+	Username          string `json:"username"`
+	DisplayName       string `json:"display_name"`
+	Password          string `json:"password"`
+	ProfilePictureKey string `json:"profile_picture_key"`
 }
 
 // @Summary Update user
@@ -221,7 +226,7 @@ type UpdateUserRequest struct {
 // @ID update-user
 // @Tags user
 // @Produce json
-// @Param Authorization header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Param userData body UpdateUserRequest true "User Data"
 // @Success 200
 // @Failure 401 {object} httputils.ErrorResponse
@@ -249,12 +254,12 @@ func (h *UserHandler) updateUser(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	user := model.User{
-		Model:              gorm.Model{ID: claims.UserID},
-		Phone:              req.Phone,
-		Username:           req.Username,
-		DisplayName:        req.DisplayName,
-		Password:           req.Password,
-		ProfilePictureLink: req.ProfilePictureLink,
+		Model:             gorm.Model{ID: claims.UserID},
+		Phone:             req.Phone,
+		Username:          req.Username,
+		DisplayName:       req.DisplayName,
+		Password:          req.Password,
+		ProfilePictureKey: req.ProfilePictureKey,
 	}
 
 	if err := h.userService.UpdateUser(&user); err != nil {
@@ -306,7 +311,7 @@ func (h *UserHandler) getUser(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.User
 // @Failure 401 {object} httputils.ErrorResponse
 // @Failure 404 {object} httputils.ErrorResponse
-// @Param Bearer header string true "Auth Token"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
 // @Router /me [get]
 func (h *UserHandler) getCurrentUser(w http.ResponseWriter, r *http.Request) {
 	tokenStr := extractTokenFromHeader(r)
@@ -354,6 +359,163 @@ func (h *UserHandler) searchUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputils.ResponseJSON(w, http.StatusOK, users)
+}
+
+type PresignedURL struct {
+	ProfilePictureURL string
+}
+
+// @Summary Upload user pfp
+// @Description Upload profile picture for user
+// @ID upload-profile-picture
+// @Tags user
+// @Accept multipart/form-data
+// @Produce  json
+// @Success 200 {object} PresignedURL
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 401 {object} httputils.ErrorResponse
+// @Failure 403 {object} httputils.ErrorResponse
+// @Failure 404 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
+// @Param id path string true "ID пользователя"
+// @Param Authorization header string true "Bearer токен" default(Bearer )
+// @Param file formData file true "Файл для загрузки"
+// @Router /user/{id}/avatar [post]
+func (h *UserHandler) UploadProfilePicture(w http.ResponseWriter, r *http.Request) {
+	tokenStr := extractTokenFromHeader(r)
+	if tokenStr == "" {
+		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
+		return
+	}
+	claims, err := auth.ValidateToken(tokenStr)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	vars := mux.Vars(r)
+	userID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to parse user ID")
+		return
+	}
+
+	if claims.UserID != uint(userID) {
+		httputils.ResponseError(w, http.StatusForbidden, "token does not match with user id")
+		return
+	}
+
+	file, header, err := r.FormFile("avatar")
+	if err != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "failed to get file from request")
+		return
+	}
+	defer file.Close()
+
+	if header.Size > 5*1024*1024 {
+		httputils.ResponseError(w, http.StatusBadRequest, "file too large. max size is 5MB")
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	allowedTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/jpg":  true,
+		"image/png":  true,
+		"image/gif":  true,
+	}
+	if !allowedTypes[contentType] {
+		httputils.ResponseError(w, http.StatusBadRequest, "Invalid file type. Only JPEG, PNG and GIF are allowed")
+		return
+	}
+
+	user, err := h.userService.GetUserByID(uint(userID))
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	if user.ProfilePictureKey != "" {
+		err = h.s3Service.DeleteProfilePicture(r.Context(), user.ProfilePictureKey)
+		if err != nil {
+			log.Printf("Warning: failed to delete old profile picture: %v", err)
+		}
+	}
+
+	filename := filepath.Base(header.Filename)
+	metadata, err := h.s3Service.UploadProfilePicture(r.Context(), file, filename, contentType, uint(userID))
+	if err != nil {
+		http.Error(w, "Failed to upload profile picture", http.StatusInternalServerError)
+		return
+	}
+
+	url, err := h.s3Service.GeneratePresignedURL(r.Context(), metadata, 7*24*time.Hour) // на 7 дней
+	if err != nil {
+		http.Error(w, "Failed to generate URL", http.StatusInternalServerError)
+		return
+	}
+
+	user.ProfilePictureKey = metadata.S3Key
+
+	err = h.userService.UpdateUser(user)
+	if err != nil {
+		http.Error(w, "Failed to update user", http.StatusInternalServerError)
+		return
+	}
+
+	response := PresignedURL{
+		ProfilePictureURL: url,
+	}
+
+	httputils.ResponseJSON(w, http.StatusOK, response)
+}
+
+// @Summary Get user pfp
+// @Description Get profile picture of a user
+// @ID get-profile-picture
+// @Tags user
+// @Produce  json
+// @Success 200 {object} PresignedURL
+// @Failure 404 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
+// @Param id path string true "User ID"
+// @Router /user/{id}/avatar [get]
+func (h *UserHandler) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to parse user ID")
+		return
+	}
+
+	user, err := h.userService.GetUserByID(uint(userID))
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	if user.ProfilePictureKey == "" {
+		http.Error(w, "No profile picture", http.StatusNotFound)
+		return
+	}
+
+	// Генерируем свежий presigned URL
+	metadata := &model.FileMetadata{
+		S3Key:    user.ProfilePictureKey,
+		S3Bucket: h.s3Service.Config.S3BucketName,
+	}
+
+	url, err := h.s3Service.GeneratePresignedURL(r.Context(), metadata, time.Hour)
+	if err != nil {
+		http.Error(w, "Failed to generate URL", http.StatusInternalServerError)
+		return
+	}
+
+	response := PresignedURL{
+		ProfilePictureURL: url,
+	}
+
+	httputils.ResponseJSON(w, http.StatusOK, response)
 }
 
 // @Summary Send SMS
