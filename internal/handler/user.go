@@ -229,9 +229,15 @@ type UpdateUserRequest struct {
 // @Failure 500 {object} httputils.ErrorResponse
 // @Router /user/{id} [put]
 func (h *UserHandler) updateUser(w http.ResponseWriter, r *http.Request) {
-	claims, err := getClaimsFromContext(r)
+	tokenStr := extractTokenFromHeader(r)
+	if tokenStr == "" {
+		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
+		return
+	}
+
+	claims, err := auth.ValidateToken(tokenStr)
 	if err != nil {
-		httputils.ResponseError(w, http.StatusUnauthorized, "unauthorized")
+		httputils.ResponseError(w, http.StatusUnauthorized, "invalid token")
 		return
 	}
 
