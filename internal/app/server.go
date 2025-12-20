@@ -30,17 +30,23 @@ func NewServer(userHandler *handler.UserHandler, chatHandler *handler.ChatHandle
 }
 
 func (s *Server) setupRoutes() {
-	cors := handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With", "Origin", "Accept"}),
-		handlers.ExposedHeaders([]string{"Content-Length"}),
-		handlers.AllowCredentials(),
-		handlers.MaxAge(86400),
+	// Сначала создаем основной роутер
+	s.router = mux.NewRouter()
+
+	// Swagger ДО CORS middleware (чтобы swagger.json был доступен)
+	swaggerHandler := httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
 	)
+	s.router.PathPrefix("/swagger/").Handler(swaggerHandler)
 
-	s.router.Use(cors)
+	// doc.json endpoint
+	s.router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+		http.ServeFile(w, r, "./docs/swagger.json")
+	})
 
+	// API роуты
 	api := s.router.PathPrefix("/api").Subrouter()
 
 	// Routes для пользователей
@@ -48,18 +54,33 @@ func (s *Server) setupRoutes() {
 
 	// Routes для чатов
 	s.chatHandler.RegisterRoutes(api)
+
 	api.HandleFunc("/ping", handler.Ping)
 
-	// Swagger
-	swaggerHandler := httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"),
+	// CORS middleware должен оборачивать ВСЕ роуты
+	corsMiddleware := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{
+			"Content-Type",
+			"Authorization",
+			"X-Requested-With",
+			"Origin",
+			"Accept",
+			"X-CSRF-Token",
+		}),
+		handlers.ExposedHeaders([]string{
+			"Content-Length",
+			"Access-Control-Allow-Origin",
+			"Access-Control-Allow-Headers",
+		}),
+		handlers.AllowCredentials(),
+		handlers.MaxAge(86400),
+		handlers.OptionStatusCode(200), // Важно для OPTIONS preflight
 	)
-	s.router.PathPrefix("/swagger/").Handler(swaggerHandler)
 
-	// doc.json
-	s.router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./docs/swagger.json")
-	})
+	// Обернуть весь роутер в CORS
+	s.router.Use(corsMiddleware)
 }
 
 func (s *Server) Run(port string) {
