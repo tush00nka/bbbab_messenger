@@ -31,15 +31,13 @@ func NewUserHandler(userService service.UserService, smsRepo repository.SMSRepos
 func (c *UserHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/initlogin", c.initLogin).Methods("POST", "OPTIONS")
 	router.HandleFunc("/confirmlogin", c.confirmLogin).Methods("POST", "OPTIONS")
-	router.HandleFunc("/login", c.loginUser).Methods("POST", "OPTIONS")
-	router.HandleFunc("/register", c.registerUser).Methods("POST", "OPTIONS")
+	router.HandleFunc("/users/{id}", c.updateUser).Methods("PUT", "OPTIONS")
 	router.HandleFunc("/user/{id}", c.getUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/me", c.getCurrentUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET", "OPTIONS")
 
 	// router.HandleFunc("/sms", c.sendSMS).Methods("POST", "OPTIONS")
 
-	// router.HandleFunc("/users/{id}", c.updateUser).Methods("PUT")
 	// router.HandleFunc("/users/{id}", c.deleteUser).Methods("DELETE")
 	// router.HandleFunc("/users", c.listUsers).Methods("GET")
 }
@@ -209,134 +207,40 @@ func (h *UserHandler) confirmLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// @Summary Register
-// @Description Register an account
-// @ID register
+// @Summary Update user
+// @Description Update user information
+// @ID update-user
 // @Tags user
-// @Accept json
 // @Produce json
-// @Success 201 {object} TokenResponse
-// @Failure 400 {object} httputils.ErrorResponse
-// @Failure 409 {object} httputils.ErrorResponse
+// @Param Bearer header string true "Auth Token"
+// @Param userData body model.User true "User Data"
+// @Success 200
+// @Failure 401 {object} httputils.ErrorResponse
+// @Failure 404 {object} httputils.ErrorResponse
 // @Failure 500 {object} httputils.ErrorResponse
-// @Param registerData body RegisterRequest true "Register data"
-// @Router /register [post]
-func (c *UserHandler) registerUser(w http.ResponseWriter, r *http.Request) {
-	var request RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		httputils.ResponseError(w, http.StatusBadRequest, "Invalid request format")
-		return
-	}
-	r.Body.Close()
-
-	if request.Username == "" || request.Password == "" {
-		httputils.ResponseError(w, http.StatusBadRequest, "Username and password are required")
-		return
-	}
-
-	if request.Password != request.ConfirmPassword {
-		httputils.ResponseError(w, http.StatusBadRequest, "Passwords do not match")
-		return
-	}
-
-	exists, err := c.userService.UsernameExists(request.Username)
+// @Router /user/{id} [put]
+func (h *UserHandler) updateUser(w http.ResponseWriter, r *http.Request) {
+	claims, err := getClaimsFromContext(r)
 	if err != nil {
-		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to check username availability")
-		return
-	}
-	if exists {
-		httputils.ResponseError(w, http.StatusConflict, fmt.Sprintf("User with username %s exists", request.Username))
+		httputils.ResponseError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	hash, err := auth.HashPassword(request.Password)
-	if err != nil {
-		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to generate password hash")
+	var user model.User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "invalid request format")
 		return
 	}
-	user := &model.User{Username: request.Username, Password: hash}
-	if err = c.userService.CreateUser(user); err != nil {
-		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to create user")
-		return
+	defer r.Body.Close()
+
+	// make sure we update the user that's currently logged in
+	user.ID = claims.UserID
+
+	if err := h.userService.UpdateUser(&user); err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, fmt.Sprintf("failed to update user with id: %d", user.ID))
 	}
 
-	token, err := auth.GenerateToken(user.ID)
-	if err != nil {
-		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to generate token")
-		return
-	}
-
-	httputils.ResponseJSON(w, http.StatusCreated, TokenResponse{
-		Token: token,
-	})
-}
-
-type RegisterRequest struct {
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-	ConfirmPassword string `json:"confirmPassword"`
-}
-
-// @Summary Login
-// @Description Loing into account
-// @ID login
-// @Tags user
-// @Accept json
-// @Produce json
-// @Success 201 {object} TokenResponse
-// @Failure 400 {object} httputils.ErrorResponse
-// @Failure 409 {object} httputils.ErrorResponse
-// @Failure 500 {object} httputils.ErrorResponse
-// @Param loginData body LoginRequest true "Login data"
-// @Router /login [post]
-func (h *UserHandler) loginUser(w http.ResponseWriter, r *http.Request) {
-	var request LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		httputils.ResponseError(w, http.StatusBadRequest, "Invalid request format")
-		return
-	}
-	r.Body.Close()
-
-	if request.Username == "" || request.Password == "" {
-		httputils.ResponseError(w, http.StatusBadRequest, "Username and password are required")
-		return
-	}
-
-	// exists, err := h.userService.UsernameExists(request.Username)
-	// if err != nil {
-	// 	httputils.ResponseError(w, http.StatusInternalServerError, "Failed to check user existance")
-	// 	return
-	// }
-	// if !exists {
-	// 	httputils.ResponseError(w, http.StatusConflict, fmt.Sprintf("User %s does not exist", request.Username))
-	// 	return
-	// }
-
-	user, err := h.userService.GetUserByUsername(request.Username)
-	if err != nil {
-		httputils.ResponseError(w, http.StatusConflict, fmt.Sprintf("User %s does not exist", request.Username))
-		return
-	}
-
-	if !auth.CheckPasswordHash(request.Password, user.Password) {
-		httputils.ResponseError(w, http.StatusConflict, "Wrong password")
-		return
-	}
-
-	token, err := auth.GenerateToken(user.ID)
-	if err != nil {
-		httputils.ResponseError(w, http.StatusInternalServerError, "Failed to generate token")
-		return
-	}
-
-	httputils.ResponseJSON(w, http.StatusCreated, TokenResponse{
-		Token: token,
-	})
-}
-
-type LoginRequest struct {
-	Username string
-	Password string
+	w.WriteHeader(http.StatusOK)
 }
 
 // @Summary Get user

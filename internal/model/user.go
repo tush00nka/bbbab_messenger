@@ -8,10 +8,12 @@ import (
 
 type User struct {
 	gorm.Model
-	Chats    []Chat `gorm:"many2many:chat_users;"`
-	Username string
-	Password string
-	Phone    string // такого формата мб 8-900-800-55-55
+	Chats              []Chat `gorm:"many2many:chat_users;"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	Phone              string `json:"phone"` // +79995552233
+	DisplayName        string `json:"display_name"`
+	ProfilePictureLink string `json:"profile_picture_link"`
 }
 
 func (u *User) SanitizePassword() {

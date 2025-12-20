@@ -83,6 +83,9 @@ func (s *userService) UpdateUser(user *model.User) error {
 	// Обновляем только разрешенные поля
 	existingUser.Password = user.Password
 	existingUser.Phone = user.Phone
+	existingUser.DisplayName = user.DisplayName
+	existingUser.ProfilePictureLink = user.ProfilePictureLink
+	existingUser.Username = user.Username
 
 	return s.userRepo.Update(existingUser)
 }
