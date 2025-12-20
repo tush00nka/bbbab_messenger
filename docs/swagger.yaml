@@ -130,6 +130,19 @@ definitions:
       token:
         type: string
     type: object
+  handler.UpdateUserRequest:
+    properties:
+      display_name:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      profile_picture_link:
+        type: string
+      username:
+        type: string
+    type: object
   httputils.ErrorResponse:
     properties:
       message:
@@ -778,7 +791,7 @@ paths:
         name: userData
         required: true
         schema:
-          $ref: '#/definitions/model.User'
+          $ref: '#/definitions/handler.UpdateUserRequest'
       produces:
       - application/json
       responses:
