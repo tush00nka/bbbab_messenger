@@ -32,7 +32,7 @@ func NewUserHandler(userService service.UserService, smsRepo repository.SMSRepos
 func (c *UserHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/initlogin", c.initLogin).Methods("POST", "OPTIONS")
 	router.HandleFunc("/confirmlogin", c.confirmLogin).Methods("POST", "OPTIONS")
-	router.HandleFunc("/users/{id}", c.updateUser).Methods("PUT", "OPTIONS")
+	router.HandleFunc("/user/{id}", c.updateUser).Methods("PUT", "OPTIONS")
 	router.HandleFunc("/user/{id}", c.getUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/me", c.getCurrentUser).Methods("GET", "OPTIONS")
 	router.HandleFunc("/search/{prompt}", c.searchUser).Methods("GET", "OPTIONS")
