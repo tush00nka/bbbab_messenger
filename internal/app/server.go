@@ -62,18 +62,21 @@ func (s *Server) setupRoutes() {
 
 	api.HandleFunc("/ping", handler.Ping)
 
-	swaggerHandler := httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"),
-		httpSwagger.UIConfig(map[string]string{
-			"defaultModelsExpandDepth": "0",
-		}),
-	)
-	s.router.PathPrefix("/swagger/").Handler(swaggerHandler)
+	s.router.PathPrefix("/swagger/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Установите CORS заголовки
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+
+		// Продолжить обработку Swagger
+		httpSwagger.Handler(
+			httpSwagger.URL("/swagger/doc.json"),
+		).ServeHTTP(w, r)
+	})
 
 	s.router.HandleFunc("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./docs/swagger.json")
 	})
-
 }
 
 func (s *Server) Run(port string) {
