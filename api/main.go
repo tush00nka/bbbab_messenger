@@ -2,7 +2,7 @@
 // @version 0.1
 // @description This is a sample server.
 
-// @host localhost:8080
+// @host amber.thatusualguy.ru:8080
 // @BasePath /api
 // @query.collection.format multi
 // @schemes http

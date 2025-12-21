@@ -240,7 +240,7 @@ definitions:
       username:
         type: string
     type: object
-host: localhost:8080
+host: amber.thatusualguy.ru:8080
 info:
   contact: {}
   description: This is a sample server.
@@ -908,4 +908,6 @@ paths:
       summary: Upload user pfp
       tags:
       - user
+schemes:
+- http
 swagger: "2.0"
