@@ -6,7 +6,6 @@ import (
 	"time"
 	"tush00nka/bbbab_messenger/internal/handler"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -29,9 +28,39 @@ func NewServer(userHandler *handler.UserHandler, chatHandler *handler.ChatHandle
 	return s
 }
 
+func CORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Установите CORS заголовки
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+
+		// Если это preflight OPTIONS запрос
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) setupRoutes() {
 	// Сначала создаем основной роутер
 	s.router = mux.NewRouter()
+
+	s.router.Use(CORSMiddleware)
+
+	// API роуты
+	api := s.router.PathPrefix("/api").Subrouter()
+
+	// Routes для пользователей
+	s.userHandler.RegisterRoutes(api)
+
+	// Routes для чатов
+	s.chatHandler.RegisterRoutes(api)
+
+	api.HandleFunc("/ping", handler.Ping)
 
 	swaggerHandler := httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
@@ -45,43 +74,6 @@ func (s *Server) setupRoutes() {
 		http.ServeFile(w, r, "./docs/swagger.json")
 	})
 
-	// API роуты
-	api := s.router.PathPrefix("/api").Subrouter()
-
-	// Routes для пользователей
-	s.userHandler.RegisterRoutes(api)
-
-	// Routes для чатов
-	s.chatHandler.RegisterRoutes(api)
-
-	api.HandleFunc("/ping", handler.Ping)
-
-	// CORS middleware должен оборачивать ВСЕ роуты
-	corsMiddleware := handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{
-			"Content-Type",
-			"Authorization",
-			"X-Requested-With",
-			"Origin",
-			"Accept",
-			"X-CSRF-Token",
-		}),
-		handlers.ExposedHeaders([]string{
-			"Content-Length",
-			"Access-Control-Allow-Origin",
-			"Access-Control-Allow-Headers",
-		}),
-		handlers.AllowCredentials(),
-		handlers.MaxAge(86400),
-		handlers.OptionStatusCode(200), // Важно для OPTIONS preflight
-	)
-
-	// Обернуть весь роутер в CORS
-	s.router.Use(func(next http.Handler) http.Handler {
-		return corsMiddleware(next)
-	})
 }
 
 func (s *Server) Run(port string) {

@@ -5,6 +5,7 @@
 // @host localhost:8080
 // @BasePath /api
 // @query.collection.format multi
+// @schemes http
 
 package main
 
