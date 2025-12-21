@@ -125,7 +125,7 @@ func (s *S3Service) UploadProfilePicture(ctx context.Context, file io.Reader, fi
 	fileID := uuid.New().String()
 
 	ext := path.Ext(filename)
-	s3Key := path.Join("avatar", fmt.Sprint(userID), fileID+ext)
+	s3Key := path.Join("avatars", fmt.Sprint(userID), fileID+ext)
 
 	result, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.Config.S3BucketName),
@@ -134,7 +134,7 @@ func (s *S3Service) UploadProfilePicture(ctx context.Context, file io.Reader, fi
 		ContentType: aws.String(contentType),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to uplaod profile picture: %w", err)
+		return nil, fmt.Errorf("failed to upload profile picture: %w", err)
 	}
 
 	log.Printf("[S3] Profile picture uploaded successfully: %s", result.Location)

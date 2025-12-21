@@ -445,7 +445,7 @@ func (h *UserHandler) UploadProfilePicture(w http.ResponseWriter, r *http.Reques
 	filename := filepath.Base(header.Filename)
 	metadata, err := h.s3Service.UploadProfilePicture(r.Context(), file, filename, contentType, uint(userID))
 	if err != nil {
-		http.Error(w, "Failed to upload profile picture", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Failed to upload profile picture: %v", err), http.StatusInternalServerError)
 		return
 	}
 
