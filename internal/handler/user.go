@@ -379,7 +379,7 @@ type PresignedURL struct {
 // @Failure 500 {object} httputils.ErrorResponse
 // @Param id path string true "ID пользователя"
 // @Param Authorization header string true "Bearer токен" default(Bearer )
-// @Param file formData file true "Файл для загрузки"
+// @Param avatar formData file true "Файл для загрузки"
 // @Router /user/{id}/avatar [post]
 func (h *UserHandler) UploadProfilePicture(w http.ResponseWriter, r *http.Request) {
 	tokenStr := extractTokenFromHeader(r)

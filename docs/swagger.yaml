@@ -875,7 +875,7 @@ paths:
         type: string
       - description: Файл для загрузки
         in: formData
-        name: file
+        name: avatar
         required: true
         type: file
       produces:

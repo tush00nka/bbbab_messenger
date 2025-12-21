@@ -949,7 +949,7 @@ const docTemplate = `{
                     {
                         "type": "file",
                         "description": "Файл для загрузки",
-                        "name": "file",
+                        "name": "avatar",
                         "in": "formData",
                         "required": true
                     }
