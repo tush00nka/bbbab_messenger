@@ -362,7 +362,7 @@ func (h *UserHandler) searchUser(w http.ResponseWriter, r *http.Request) {
 }
 
 type PresignedURL struct {
-	ProfilePictureURL string
+	ProfilePictureURL string `json:"profile_picture_url"`
 }
 
 // @Summary Upload user pfp
