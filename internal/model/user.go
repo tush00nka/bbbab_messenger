@@ -20,6 +20,12 @@ func (u *User) SanitizePassword() {
 	u.Password = ""
 }
 
+func (u *User) EnsureDisplayName() {
+	if u.DisplayName == "" {
+		u.DisplayName = u.Username
+	}
+}
+
 type VerificationCode struct {
 	Phone     string    `json:"phone"`
 	Code      string    `json:"code"`

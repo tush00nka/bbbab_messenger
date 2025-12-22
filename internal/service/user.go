@@ -27,6 +27,8 @@ func (s *userService) CreateUser(user *model.User) error {
 		return errors.New("phone is required")
 	}
 
+	user.EnsureDisplayName()
+
 	return s.userRepo.Create(user)
 }
 
@@ -39,6 +41,8 @@ func (s *userService) GetUserByID(id uint) (*model.User, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	user.EnsureDisplayName()
 
 	// user.SanitizePassword() // Удаляем чувствительные данные перед возвратом
 
@@ -55,6 +59,8 @@ func (s *userService) GetUserByUsername(username string) (*model.User, error) {
 		return nil, err
 	}
 
+	user.EnsureDisplayName()
+
 	// user.SanitizePassword() // Удаляем чувствительные данные перед возвратом
 
 	return user, nil
@@ -69,6 +75,8 @@ func (s *userService) GetUserByPhone(phone string) (*model.User, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	user.EnsureDisplayName()
 
 	return user, nil
 }
