@@ -295,21 +295,6 @@ func getClaimsFromContext(r *http.Request) (*auth.Claims, error) {
 	return claims, nil
 }
 
-// SendMessage отправляет сообщение
-// @Summary Send message
-// @Description Send message to user or existing chat
-// @ID send-message
-// @Tags chat
-// @Accept json
-// @Produce json
-// @Param Authorization header string true "Bearer токен" default(Bearer )
-// @Param messageData body SendMessageRequest true "Message data"
-// @Success 201 {object} model.Message
-// @Failure 400 {object} httputils.ErrorResponse
-// @Failure 401 {object} httputils.ErrorResponse
-// @Failure 403 {object} httputils.ErrorResponse
-// @Failure 500 {object} httputils.ErrorResponse
-// @Router /sendmessage [post]
 func (h *ChatHandler) sendMessage(w http.ResponseWriter, r *http.Request) {
 	claims, err := getClaimsFromContext(r)
 	if err != nil {
@@ -1126,6 +1111,10 @@ func (h *ChatHandler) getChatInfo(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httputils.ResponseError(w, http.StatusNotFound, "chat not found")
 		return
+	}
+
+	for _, user := range chat.Users {
+		user.EnsureDisplayName()
 	}
 
 	httputils.ResponseJSON(w, http.StatusOK, chat)
