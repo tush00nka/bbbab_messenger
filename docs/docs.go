@@ -714,73 +714,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/sendmessage": {
-            "post": {
-                "description": "Send message to user or existing chat",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "chat"
-                ],
-                "summary": "Send message",
-                "operationId": "send-message",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "Bearer",
-                        "description": "Bearer токен",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "Message data",
-                        "name": "messageData",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.SendMessageRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/model.Message"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/httputils.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httputils.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/httputils.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/httputils.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/user/{id}": {
             "get": {
                 "description": "Get user by id",
@@ -1141,7 +1074,7 @@ const docTemplate = `{
         "handler.PresignedURL": {
             "type": "object",
             "properties": {
-                "profilePictureURL": {
+                "profile_picture_url": {
                     "type": "string"
                 }
             }
@@ -1151,35 +1084,6 @@ const docTemplate = `{
             "properties": {
                 "phone": {
                     "type": "string"
-                }
-            }
-        },
-        "handler.SendMessageRequest": {
-            "type": "object",
-            "required": [
-                "message",
-                "receiver_id"
-            ],
-            "properties": {
-                "chat_id": {
-                    "type": "integer"
-                },
-                "message": {
-                    "type": "string",
-                    "maxLength": 5000,
-                    "minLength": 1
-                },
-                "receiver_id": {
-                    "type": "integer"
-                },
-                "type": {
-                    "type": "string",
-                    "default": "text",
-                    "enum": [
-                        "text",
-                        "image",
-                        "file"
-                    ]
                 }
             }
         },

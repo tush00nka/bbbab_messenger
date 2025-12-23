@@ -96,34 +96,13 @@ definitions:
     type: object
   handler.PresignedURL:
     properties:
-      profilePictureURL:
+      profile_picture_url:
         type: string
     type: object
   handler.SMSLoginRequest:
     properties:
       phone:
         type: string
-    type: object
-  handler.SendMessageRequest:
-    properties:
-      chat_id:
-        type: integer
-      message:
-        maxLength: 5000
-        minLength: 1
-        type: string
-      receiver_id:
-        type: integer
-      type:
-        default: text
-        enum:
-        - text
-        - image
-        - file
-        type: string
-    required:
-    - message
-    - receiver_id
     type: object
   handler.StatusResponse:
     properties:
@@ -719,51 +698,6 @@ paths:
       summary: Search users
       tags:
       - user
-  /sendmessage:
-    post:
-      consumes:
-      - application/json
-      description: Send message to user or existing chat
-      operationId: send-message
-      parameters:
-      - default: Bearer
-        description: Bearer токен
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: Message data
-        in: body
-        name: messageData
-        required: true
-        schema:
-          $ref: '#/definitions/handler.SendMessageRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/model.Message'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/httputils.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/httputils.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/httputils.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/httputils.ErrorResponse'
-      summary: Send message
-      tags:
-      - chat
   /user/{id}:
     get:
       description: Get user by id
