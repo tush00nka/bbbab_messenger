@@ -1113,8 +1113,8 @@ func (h *ChatHandler) getChatInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, user := range chat.Users {
-		user.EnsureDisplayName()
+	for i := range len(chat.Users) {
+		chat.Users[i].EnsureDisplayName()
 	}
 
 	httputils.ResponseJSON(w, http.StatusOK, chat)
