@@ -1113,7 +1113,7 @@ func (h *ChatHandler) getChatInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for i := range len(chat.Users) {
+	for i := range chat.Users {
 		chat.Users[i].EnsureDisplayName()
 	}
 

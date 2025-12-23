@@ -202,7 +202,7 @@ func (r *chatRepository) GetChatUsers(ctx context.Context, chatID uint) ([]model
 		ORDER BY u.username
 	`, chatID).Scan(&users).Error
 
-	for i := range len(users) {
+	for i := range users {
 		users[i].EnsureDisplayName()
 	}
 
