@@ -145,6 +145,7 @@ func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/chat/leave/{chat_id:[0-9]+}/{user_id:[0-9]+}", authMiddleware(h.UserLeft)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/{chat_id:[0-9]+}/add/{user_id:[0-9]+}", authMiddleware(h.UserAdd)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/{chat_id:[0-9]+}/remove/{user_id:[0-9]+}", authMiddleware(h.UserRemove)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/chat/{chat_id:[0-9]+}/rename", authMiddleware(h.RenameChat)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/group/create", authMiddleware(h.CreateGroup)).Methods("POST", "OPTIONS")
 }
 
@@ -595,6 +596,57 @@ func (h *ChatHandler) createChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputils.ResponseJSON(w, http.StatusCreated, chat)
+}
+
+// ChatRename переименование чата
+// @Summary Rename Chat
+// @Description Renames Chat
+// @ID rename-chat
+// @Tags chat
+// @Param Authorization header string true "Bearer токен" default(Bearer )
+// @Param chat_id path int true "Chat ID"
+// @Param new_name path int true "New Chat Name"
+// @Success 200
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 401 {object} httputils.ErrorResponse
+// @Failure 403 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
+// @Router /chat/{chat_id}/rename/{new_name} [put]
+func (h *ChatHandler) RenameChat(w http.ResponseWriter, r *http.Request) {
+	tokenStr := extractTokenFromHeader(r)
+	if tokenStr == "" {
+		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
+		return
+	}
+	claims, err := auth.ValidateToken(tokenStr)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	vars := mux.Vars(r)
+	chatID, err1 := strconv.ParseUint(vars["chat_id"], 10, 64)
+	newName := vars["new_name"]
+	if err1 != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "invalid chat id")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), PresenceTimeout)
+	defer cancel()
+
+	if ok, _ := h.chatService.IsUserInChat(ctx, uint(chatID), claims.UserID); !ok {
+		httputils.ResponseError(w, http.StatusForbidden, "renamer is not in chat")
+		return
+	}
+
+	err = h.chatService.UpdateGroupInfo(ctx, uint(chatID), newName, "")
+	if err != nil {
+		httputils.ResponseError(w, http.StatusInternalServerError, "failed to rename chat")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // UserAdd отмечает пользователя как подключенного

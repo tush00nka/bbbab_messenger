@@ -312,6 +312,49 @@ paths:
       summary: Remove User from Chat
       tags:
       - chat
+  /chat/{chat_id}/rename/{new_name}:
+    put:
+      description: Renames Chat
+      operationId: rename-chat
+      parameters:
+      - default: Bearer
+        description: Bearer токен
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Chat ID
+        in: path
+        name: chat_id
+        required: true
+        type: integer
+      - description: New Chat Name
+        in: path
+        name: new_name
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Rename Chat
+      tags:
+      - chat
   /chat/{id}:
     get:
       consumes:
