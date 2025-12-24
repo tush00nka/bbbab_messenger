@@ -226,6 +226,92 @@ info:
   title: BBBAB Messenger
   version: "0.1"
 paths:
+  /chat/{chat_id}/add/{user_id}:
+    post:
+      description: Add User to Chat
+      operationId: user-add
+      parameters:
+      - default: Bearer
+        description: Bearer токен
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Chat ID
+        in: path
+        name: chat_id
+        required: true
+        type: integer
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Add User to Chat
+      tags:
+      - chat
+  /chat/{chat_id}/remove/{user_id}:
+    post:
+      description: Removes User from Chat
+      operationId: user-remove
+      parameters:
+      - default: Bearer
+        description: Bearer токен
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Chat ID
+        in: path
+        name: chat_id
+        required: true
+        type: integer
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httputils.ErrorResponse'
+      summary: Remove User from Chat
+      tags:
+      - chat
   /chat/{id}:
     get:
       consumes:
