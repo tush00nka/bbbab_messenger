@@ -555,7 +555,7 @@ func (r *chatRepository) UpdateGroupInfo(ctx context.Context, chatID uint, name,
 	return r.db.WithContext(ctx).Exec(`
 		UPDATE chats
 		SET name = ?, description = ?, updated_at = NOW()
-		WHERE id = ? AND is_group = true
+		WHERE id = ?
 	`, name, description, chatID).Error
 }
 
