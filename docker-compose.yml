@@ -49,6 +49,7 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio-data:/data
+      - ./certs:/root/.minio/certs
     command: server /data --console-address ":9001"
 
   create-buckets:
@@ -58,7 +59,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       sleep 5;
-      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc alias set myminio https://minio:9000 minioadmin minioadmin;
       /usr/bin/mc mb myminio/messenger-files --ignore-existing;
       /usr/bin/mc anonymous set public myminio/messenger-files;
       echo 'Bucket created and configured successfully';
