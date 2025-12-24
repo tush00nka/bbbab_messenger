@@ -88,6 +88,6 @@ func (s *Server) Run(port string) {
 	}
 
 	log.Printf("Server starting on port %s", port)
-	log.Fatal(srv.ListenAndServeTLS("/etc/letsencrypt/live/amber.thatusualguy.ru/fullchain.pem", "/etc/letsencrypt/live/amber.thatusualguy.ru/privkey.pem"))
+	log.Fatal(srv.ListenAndServeTLS("./certs/amber.thatusualguy.ru/fullchain.pem", "./certs/amber.thatusualguy.ru/privkey.pem"))
 	// log.Fatal(srv.ListenAndServe())
 }
