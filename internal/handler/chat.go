@@ -143,6 +143,8 @@ func (h *ChatHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/chat/{id:[0-9]+}/messages", authMiddleware(h.getMessages)).Methods("GET", "OPTIONS")
 	router.HandleFunc("/chat/join/{chat_id:[0-9]+}/{user_id:[0-9]+}", authMiddleware(h.UserJoined)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/leave/{chat_id:[0-9]+}/{user_id:[0-9]+}", authMiddleware(h.UserLeft)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/chat/{chat_id:[0-9]+}/add/{user_id:[0-9]+}", authMiddleware(h.UserAdd)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/chat/{chat_id:[0-9]+}/remove/{user_id:[0-9]+}", authMiddleware(h.UserRemove)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/chat/group/create", authMiddleware(h.CreateGroup)).Methods("POST", "OPTIONS")
 }
 
@@ -593,6 +595,108 @@ func (h *ChatHandler) createChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputils.ResponseJSON(w, http.StatusCreated, chat)
+}
+
+// UserAdd отмечает пользователя как подключенного
+// @Summary Add User to Chat
+// @Description Add User to Chat
+// @ID user-add
+// @Tags chat
+// @Param Authorization header string true "Bearer токен" default(Bearer )
+// @Param chat_id path int true "Chat ID"
+// @Param user_id path int true "User ID"
+// @Success 200
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 401 {object} httputils.ErrorResponse
+// @Failure 403 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
+// @Router /chat/{chat_id}/add/{user_id} [post]
+func (h *ChatHandler) UserAdd(w http.ResponseWriter, r *http.Request) {
+	tokenStr := extractTokenFromHeader(r)
+	if tokenStr == "" {
+		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
+		return
+	}
+	claims, err := auth.ValidateToken(tokenStr)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	vars := mux.Vars(r)
+	chatID, err1 := strconv.ParseUint(vars["chat_id"], 10, 64)
+	userID, err2 := strconv.ParseUint(vars["user_id"], 10, 64)
+	if err1 != nil || err2 != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "invalid chat or user id")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), PresenceTimeout)
+	defer cancel()
+
+	if ok, _ := h.chatService.IsUserInChat(ctx, uint(chatID), claims.UserID); !ok {
+		httputils.ResponseError(w, http.StatusForbidden, "adder is not in chat")
+		return
+	}
+
+	err = h.chatService.AddUsersToChat(ctx, uint(chatID), uint(userID))
+	if err != nil {
+		httputils.ResponseError(w, http.StatusForbidden, fmt.Sprintf("failed to add users to chat: %v", err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// UserRemove отмечает пользователя как подключенного
+// @Summary Remove User from Chat
+// @Description Removes User from Chat
+// @ID user-remove
+// @Tags chat
+// @Param Authorization header string true "Bearer токен" default(Bearer )
+// @Param chat_id path int true "Chat ID"
+// @Param user_id path int true "User ID"
+// @Success 200
+// @Failure 400 {object} httputils.ErrorResponse
+// @Failure 401 {object} httputils.ErrorResponse
+// @Failure 403 {object} httputils.ErrorResponse
+// @Failure 500 {object} httputils.ErrorResponse
+// @Router /chat/{chat_id}/remove/{user_id} [post]
+func (h *ChatHandler) UserRemove(w http.ResponseWriter, r *http.Request) {
+	tokenStr := extractTokenFromHeader(r)
+	if tokenStr == "" {
+		httputils.ResponseError(w, http.StatusUnauthorized, "missing auth token")
+		return
+	}
+	claims, err := auth.ValidateToken(tokenStr)
+	if err != nil {
+		httputils.ResponseError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	vars := mux.Vars(r)
+	chatID, err1 := strconv.ParseUint(vars["chat_id"], 10, 64)
+	userID, err2 := strconv.ParseUint(vars["user_id"], 10, 64)
+	if err1 != nil || err2 != nil {
+		httputils.ResponseError(w, http.StatusBadRequest, "invalid chat or user id")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), PresenceTimeout)
+	defer cancel()
+
+	if ok, _ := h.chatService.IsUserInChat(ctx, uint(chatID), claims.UserID); !ok {
+		httputils.ResponseError(w, http.StatusForbidden, "remover is not in chat")
+		return
+	}
+
+	err = h.chatService.RemoveUserFromChat(ctx, uint(chatID), uint(userID))
+	if err != nil {
+		httputils.ResponseError(w, http.StatusForbidden, fmt.Sprintf("failed to remove user from chat: %v", err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // UserJoined отмечает пользователя как подключенного
